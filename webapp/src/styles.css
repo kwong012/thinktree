@@ -2,29 +2,29 @@
 :root {
   color-scheme: dark;
   --bg: #000000;
-  --panel: #0b0c0e;
-  --panel2: #13151a;
-  --border: #2c3139;
-  --border-strong: #3e444f;
-  --text: #f3f0e9;
-  --muted: #a9adb5;
-  --faint: #787d86;
-  --accent: #e2b75c;
+  --panel: #0a0a0a;
+  --panel2: #141414;
+  --border: #2d2d2d;
+  --border-strong: #454545;
+  --text: #f2f2f2;
+  --muted: #c7c7c7;
+  --faint: #7f7f7f;
+  --accent: #00c5c7;
 
-  --node-bg: #101216;
-  --node-hover: #15181d;
-  --edge: #4b515c;
-  --edge-cross: #8d7649;
-  --edge-far: #77808c;
-  --chip-bg: #21252d;
-  --chip-text: #bcc0c8;
+  --node-bg: #0d0d0d;
+  --node-hover: #181818;
+  --edge: #555555;
+  --edge-cross: #c7c400;
+  --edge-far: #757575;
+  --chip-bg: #232323;
+  --chip-text: #c7c7c7;
   --pre-bg: #000000;
-  --pre-text: #c6cad1;
-  --minimap-mask: rgba(0, 0, 0, 0.78);
-  --focus: #dd8fb3;
-  --frame: #8d939d;
-  --thread: #8a919c;
-  --highlight: #e2b75c;
+  --pre-text: #d0d0d0;
+  --minimap-mask: rgba(0, 0, 0, 0.8);
+  --focus: #ff6e67;
+  --frame: #8a8a8a;
+  --thread: #8a8a8a;
+  --highlight: #00c5c7;
 }
 
 * { box-sizing: border-box; }
@@ -60,8 +60,8 @@ body {
 }
 .status { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--faint); }
 .status .sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
-.status[data-status="open"] .sdot { background: #5f8f74; }
-.status[data-status="error"] .sdot { background: #b0853f; }
+.status[data-status="open"] .sdot { background: #5ffa68; }
+.status[data-status="error"] .sdot { background: #c7c400; }
 .focused { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
 .iconbtn {
   border: 0; background: var(--panel2); color: var(--muted);
@@ -92,7 +92,7 @@ body {
   background: var(--chip-bg); color: var(--chip-text);
   letter-spacing: .06em; text-transform: uppercase;
 }
-.focusdot { width: 5px; height: 5px; border-radius: 50%; background: #5f8f74; }
+.focusdot { width: 5px; height: 5px; border-radius: 50%; background: #5ffa68; }
 .scount {
   font-size: 9px; min-width: 14px; text-align: center;
   padding: 0 4px; background: var(--chip-bg); color: var(--chip-text);
@@ -155,9 +155,9 @@ body {
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
   padding: 7px 9px;
-  background: var(--node-bg);
+  background: color-mix(in srgb, var(--c) 7%, var(--node-bg));
   border: 0;
-  border-left: 3px solid var(--c);
+  border-left: 4px solid var(--c);
   overflow: hidden;
 }
 .ttnode:hover { background: var(--node-hover); }
@@ -188,7 +188,7 @@ body {
   color: var(--pre-text); background: var(--pre-bg);
   max-height: 34px; overflow: hidden; white-space: pre-wrap; word-break: break-all;
 }
-.ttpre.out { color: #7d9c86; }
+.ttpre.out { color: #5ffa68; }
 .ttchips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
 .chip {
   font-size: 8.5px; padding: 0 5px;
@@ -229,13 +229,13 @@ body {
   background: transparent; border: 0; opacity: 0;
 }
 
-/* ---------- kind colors (muted) ---------- */
-.ttnode.kind-send, .ttmini.kind-send { --c: #6ea8fe; }
-.ttnode.kind-context, .ttmini.kind-context { --c: #b9bec7; }
-.ttnode.kind-model, .ttmini.kind-model { --c: #b49cff; }
-.ttnode.kind-reason, .ttmini.kind-reason { --c: #d4b5ff; }
-.ttnode.kind-tool, .ttmini.kind-tool { --c: #f0b84a; }
-.ttnode.kind-answer, .ttmini.kind-answer { --c: #6fd39a; }
+/* ---------- kind colors (mac terminal pro) ---------- */
+.ttnode.kind-send, .ttmini.kind-send { --c: #6871ff; }
+.ttnode.kind-context, .ttmini.kind-context { --c: #9a9a9a; }
+.ttnode.kind-model, .ttmini.kind-model { --c: #ca30c7; }
+.ttnode.kind-reason, .ttmini.kind-reason { --c: #ff77ff; }
+.ttnode.kind-tool, .ttmini.kind-tool { --c: #c7c400; }
+.ttnode.kind-answer, .ttmini.kind-answer { --c: #5ffa68; }
 
 /* ---------- edges ---------- */
 .react-flow__edge-path { vector-effect: non-scaling-stroke; stroke-linecap: round; }
@@ -303,7 +303,7 @@ body {
   white-space: pre-wrap; word-break: break-word;
   max-height: none; overflow: visible;
 }
-.ttfull .dpre.out { color: #7d9c86; }
+.ttfull .dpre.out { color: #5ffa68; }
 .ttfull .drawer-actions { margin-top: 8px; }
 .ttfull .drawer-actions button {
   padding: 4px 9px; border: 0; background: var(--panel2);
