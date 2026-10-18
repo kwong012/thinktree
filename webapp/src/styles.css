@@ -156,6 +156,7 @@ body {
 .tb-actions button + button { border-left: 1px solid var(--border); }
 .canvas-toolbar button:hover { background: var(--panel2); color: var(--text); }
 .canvas-toolbar button.on { color: var(--accent); }
+.canvas-toolbar button:disabled { opacity: .5; cursor: default; }
 .hl-legend {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 9.5px; color: var(--faint);

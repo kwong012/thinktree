@@ -47,15 +47,15 @@ function estimateExpandedHeight(data) {
   return Math.min(900, 180 + Math.ceil(chars / 60) * 16);
 }
 
-export default function GraphCanvas({ session }) {
+export default function GraphCanvas({ session, onRefresh, refreshing }) {
   return (
     <ReactFlowProvider>
-      <Inner session={session} />
+      <Inner session={session} onRefresh={onRefresh} refreshing={refreshing} />
     </ReactFlowProvider>
   );
 }
 
-function Inner({ session }) {
+function Inner({ session, onRefresh, refreshing }) {
   const rf = useReactFlow();
   const lang = useContext(LangCtx);
   const [lod, setLod] = useState('near');
@@ -438,6 +438,9 @@ function Inner({ session }) {
         </div>
         <div className="spacer" />
         <div className="tb-actions">
+          <button onClick={onRefresh} disabled={refreshing}>
+            {t(lang, 'refresh')}
+          </button>
           <button className={showMini ? 'on' : ''} onClick={() => setShowMini((v) => !v)}>
             {showMini ? t(lang, 'hideMap') : t(lang, 'map')}
           </button>

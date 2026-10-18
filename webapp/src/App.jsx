@@ -167,21 +167,6 @@ export default function App() {
           <div className="hdr-actions">
             <button
               className="iconbtn"
-              onClick={refresh}
-              disabled={refreshing}
-              title={t(lang, 'refresh')}
-            >
-              <svg
-                className="ticon"
-                viewBox="0 0 12 12"
-                style={{ animation: refreshing ? 'tt-spin 0.9s linear infinite' : undefined }}
-              >
-                <path d="M9.7 4.4A4 4 0 1 0 10 7.2" />
-                <path d="M9.9 1.8v2.9H7" />
-              </svg>
-            </button>
-            <button
-              className="iconbtn"
               onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
               title="中文 / English"
             >
@@ -255,7 +240,7 @@ export default function App() {
 
         <main className="main">
           {session ? (
-            <GraphCanvas key={`${session.sourceId}:${session.id}`} session={session} />
+            <GraphCanvas key={`${session.sourceId}:${session.id}`} session={session} onRefresh={refresh} refreshing={refreshing} />
           ) : activeAgent ? (
             <div className="stage">{t(lang, 'loading')}</div>
           ) : (
