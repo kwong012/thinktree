@@ -23,6 +23,11 @@ const PORT = Number(process.env.PORT) || 5517;
 
 const registry = createRegistry();
 
+// 双击启动脚本时：浏览器全部关闭后自动退出，避免残留进程。
+const EXIT_ON_CLOSE = process.env.TT_EXIT_ON_CLIENT_CLOSE === '1';
+let sseClients = 0;
+let shutdownTimer = null;
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -124,6 +129,12 @@ const server = createHttpServer(async (req, res) => {
 
 /** SSE：agents 快照变化 + 每个活会话的增量。 */
 function stream(req, res) {
+  sseClients += 1;
+  if (shutdownTimer) {
+    clearTimeout(shutdownTimer);
+    shutdownTimer = null;
+  }
+
   res.writeHead(200, {
     'content-type': 'text/event-stream; charset=utf-8',
     'cache-control': 'no-cache',
@@ -190,7 +201,24 @@ function stream(req, res) {
 
   tick();
   const timer = setInterval(tick, 1200);
-  req.on('close', () => clearInterval(timer));
+  req.on('close', () => {
+    clearInterval(timer);
+    sseClients = Math.max(0, sseClients - 1);
+
+    if (EXIT_ON_CLOSE && sseClients === 0) {
+      shutdownTimer = setTimeout(() => {
+        if (sseClients > 0) return;
+        console.log('browser closed; shutting down');
+        try {
+          server.close();
+        } catch {
+          // ignore
+        }
+        registry.proc?.stop?.();
+        process.exit(0);
+      }, 5000);
+    }
+  });
 }
 
 server.listen(PORT, () => {

@@ -87,3 +87,9 @@ thinktree/
 - PTY 兜底源（无本地存储的 CLI agent）。
 - 大数据量下的虚拟化/性能优化。
 - 更多 agent（Claude Code、Gemini CLI 等）。
+
+## 5. 启动 / 停止
+
+- 双击 `scripts/thinktree.bat`：启动服务并打开浏览器。
+- 关闭浏览器标签/窗口后，SSE 客户端归零，服务在 5 秒后自动退出。
+- 手动运行：`npm start`（不会自动退出）。

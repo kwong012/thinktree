@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
-  Background,
   Controls,
   MiniMap,
   useNodesState,
@@ -482,7 +481,6 @@ function Inner({ session }) {
             onlyRenderVisibleElements
             colorMode="dark"
           >
-            <Background color="var(--grid)" gap={22} size={1} />
             <Controls showInteractive={false} />
             {showMini ? (
               <MiniMap

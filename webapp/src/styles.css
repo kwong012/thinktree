@@ -1,31 +1,26 @@
-/* ---------- design tokens ---------- */
+/* ---------- flat dark tokens ---------- */
 :root {
   color-scheme: dark;
   --bg: #0b0c0e;
   --panel: #101216;
-  --panel2: #15181d;
-  --border: #23262c;
-  --border-strong: #343841;
+  --panel2: #171a1f;
+  --border: #262a31;
+  --border-strong: #363b44;
   --text: #e7e4dd;
   --muted: #8b8e95;
   --faint: #5d6168;
   --accent: #c8a24a;
-  --accent-soft: rgba(200, 162, 74, 0.13);
 
-  --node-bg: #0f1114;
-  --node-border: #21242a;
+  --node-bg: #111317;
+  --node-hover: #15181d;
   --edge: #363a42;
   --edge-cross: #6d5c3a;
   --edge-far: #5a5f68;
-  --grid: #16181d;
-  --chip-bg: #1a1d22;
+  --chip-bg: #1c2026;
   --chip-text: #9a9da4;
   --pre-bg: #0a0b0d;
   --pre-text: #a8acb3;
-  --drawer: #0f1114;
-  --shadow: rgba(0, 0, 0, 0.45);
   --minimap-mask: rgba(9, 10, 12, 0.72);
-  --sel: #c8a24a;
   --focus: #c07a9a;
   --frame: #70757d;
   --thread: #6e747d;
@@ -61,7 +56,6 @@ body {
   content: '';
   width: 7px; height: 7px;
   border: 1.5px solid var(--accent);
-  border-radius: 1px;
   transform: rotate(45deg);
 }
 .status { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--faint); }
@@ -70,50 +64,44 @@ body {
 .status[data-status="error"] .sdot { background: #b0853f; }
 .focused { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
 .iconbtn {
-  border: 1px solid var(--border); background: transparent; color: var(--muted);
-  border-radius: 5px; min-width: 27px; height: 23px; padding: 0 7px;
+  border: 0; background: var(--panel2); color: var(--muted);
+  min-width: 27px; height: 23px; padding: 0 7px;
   font: inherit; font-size: 10.5px; cursor: pointer;
 }
-.iconbtn:hover { color: var(--text); border-color: var(--border-strong); }
-.ticon {
-  width: 12px; height: 12px;
-  fill: none; stroke: currentColor; stroke-width: 1.2;
-  stroke-linecap: round; stroke-linejoin: round;
-}
+.iconbtn:hover { background: var(--border); color: var(--text); }
 
 /* ---------- tabs ---------- */
 .tabs {
-  display: flex; align-items: center; gap: 3px;
-  padding: 6px 12px;
+  display: flex; align-items: stretch; gap: 2px;
+  padding: 0 12px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
 }
 .tab {
   display: flex; align-items: center; gap: 7px;
-  padding: 5px 10px;
-  border: 1px solid transparent; border-radius: 6px;
-  background: transparent; color: var(--muted);
+  padding: 7px 11px;
+  border: 0; background: transparent; color: var(--muted);
   font: inherit; cursor: pointer; white-space: nowrap;
 }
 .tab:hover { color: var(--text); background: var(--panel2); }
-.tab.on { color: var(--text); background: var(--panel2); border-color: var(--border); }
+.tab.on { color: var(--text); background: var(--panel2); box-shadow: inset 0 -2px 0 var(--accent); }
 .tabname { font-weight: 600; }
 .iface {
-  font-size: 8.5px; padding: 1px 4px; border-radius: 3px;
+  font-size: 8.5px; padding: 1px 4px;
   background: var(--chip-bg); color: var(--chip-text);
   letter-spacing: .06em; text-transform: uppercase;
 }
 .focusdot { width: 5px; height: 5px; border-radius: 50%; background: #5f8f74; }
 .scount {
   font-size: 9px; min-width: 14px; text-align: center;
-  padding: 0 4px; border-radius: 99px; background: var(--chip-bg); color: var(--chip-text);
+  padding: 0 4px; background: var(--chip-bg); color: var(--chip-text);
 }
 .tabempty { padding: 6px; font-size: 10.5px; color: var(--faint); }
 
 /* ---------- session bar ---------- */
 .sessionbar {
-  display: flex; align-items: center; gap: 7px;
+  display: flex; align-items: center; gap: 6px;
   padding: 5px 16px; background: var(--panel2);
   border-bottom: 1px solid var(--border); overflow-x: auto;
 }
@@ -123,16 +111,16 @@ body {
 }
 .pill {
   max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  padding: 2px 9px; border-radius: 5px; border: 1px solid transparent;
+  padding: 3px 9px; border: 0;
   background: transparent; color: var(--muted); font: inherit; font-size: 10.5px; cursor: pointer;
 }
 .pill:hover { color: var(--text); }
-.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--panel); }
+.pill.on { color: var(--text); background: var(--border); }
 .meta { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
 
 /* ---------- canvas ---------- */
 .main { flex: 1; position: relative; min-height: 0; }
-.canvas-wrap { position: absolute; inset: 0; }
+.canvas-wrap { position: absolute; inset: 0; background: var(--bg); }
 
 .canvas-toolbar {
   position: absolute; z-index: 5; top: 10px; left: 12px; right: 12px;
@@ -140,26 +128,26 @@ body {
 }
 .canvas-toolbar > * { pointer-events: auto; }
 .lod-pill {
-  font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+  font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--faint); padding: 0;
 }
 .canvas-toolbar .muted { font-size: 10px; color: var(--faint); }
 .canvas-toolbar button {
-  font: inherit; font-size: 10.5px; padding: 3px 9px; border-radius: 5px;
-  border: 1px solid var(--border); background: var(--panel); color: var(--muted); cursor: pointer;
+  font: inherit; font-size: 10.5px; padding: 4px 9px;
+  border: 0; background: var(--panel2); color: var(--muted); cursor: pointer;
 }
-.canvas-toolbar button:hover { color: var(--text); border-color: var(--border-strong); }
+.canvas-toolbar button:hover { background: var(--border); color: var(--text); }
 .hl-legend {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 9.5px; color: var(--faint); letter-spacing: .02em;
+  font-size: 9.5px; color: var(--faint);
 }
-.hl-legend i { width: 10px; height: 1px; border-radius: 1px; background: var(--highlight); }
+.hl-legend i { width: 10px; height: 2px; background: var(--highlight); }
 
 .stage { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); }
 .stage.empty h2 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--text); }
 .stage.empty p { margin: 0; font-size: 11.5px; }
 
-/* ---------- nodes ---------- */
+/* ---------- nodes (flat) ---------- */
 .react-flow__node-tt { font-size: 11px; }
 .react-flow__node { cursor: pointer; }
 
@@ -168,18 +156,18 @@ body {
   display: flex; flex-direction: column;
   padding: 7px 9px;
   background: var(--node-bg);
-  border: 1px solid var(--node-border);
-  border-left: 2px solid var(--c);
-  border-radius: 6px;
+  border: 0;
+  border-top: 2px solid var(--c);
   overflow: hidden;
 }
+.ttnode:hover { background: var(--node-hover); }
 .ttnode.sel,
-.ttnode.expanded { outline: 1px solid var(--focus); outline-offset: 1px; }
+.ttnode.expanded { outline: 1px solid var(--focus); outline-offset: -1px; }
 
 .tthead { display: flex; align-items: center; gap: 5px; min-width: 0; }
-.tticon { display: flex; color: var(--c); opacity: .9; }
+.tticon { display: flex; color: var(--c); opacity: .85; }
 .ttkind {
-  color: var(--faint); font-size: 8px; font-weight: 700;
+  color: var(--c); font-size: 8px; font-weight: 700; opacity: .8;
   letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
 }
 .tttitle {
@@ -197,13 +185,13 @@ body {
 .ttpre {
   margin: 0 0 3px; padding: 3px 5px;
   font: 9px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace;
-  color: var(--pre-text); background: var(--pre-bg); border-radius: 4px;
+  color: var(--pre-text); background: var(--pre-bg);
   max-height: 34px; overflow: hidden; white-space: pre-wrap; word-break: break-all;
 }
 .ttpre.out { color: #7d9c86; }
 .ttchips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
 .chip {
-  font-size: 8.5px; padding: 0 5px; border-radius: 3px;
+  font-size: 8.5px; padding: 0 5px;
   background: var(--chip-bg); color: var(--chip-text);
 }
 .chip.muted { opacity: .6; }
@@ -221,20 +209,19 @@ body {
 .ttnode[data-lod="mid"] .ttfoot { display: none; }
 .ttnode[data-lod="near"] .ttbody p { -webkit-line-clamp: 4; }
 
-/* 远档：轻量色块 */
+/* 远档：纯色块 */
 .ttmini {
   width: 100%; height: 100%;
   display: flex; align-items: center; gap: 4px;
   padding: 0 5px;
-  background: color-mix(in srgb, var(--c) 10%, var(--node-bg));
-  border: 1px solid color-mix(in srgb, var(--c) 26%, var(--node-border));
-  border-left: 2px solid var(--c);
-  border-radius: 4px;
+  background: color-mix(in srgb, var(--c) 20%, var(--node-bg));
+  border: 0;
+  border-top: 3px solid var(--c);
   overflow: hidden;
   font-size: 8.5px;
 }
-.ttminidot { width: 5px; height: 5px; border-radius: 50%; background: var(--c); flex: none; opacity: .9; }
-.ttminikind { color: var(--muted); white-space: nowrap; font-size: 8px; letter-spacing: .06em; text-transform: uppercase; }
+.ttminidot { display: none; }
+.ttminikind { color: var(--text); opacity: .55; white-space: nowrap; font-size: 8px; letter-spacing: .06em; text-transform: uppercase; }
 .ttminititle { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .react-flow__handle.tt-handle {
@@ -278,12 +265,10 @@ body {
   color: var(--faint);
   background: var(--bg);
   padding: 0 4px;
-  border-radius: 3px;
   pointer-events: none;
   white-space: nowrap;
 }
 
-/* 远档连线 */
 .lod-far .react-flow__edge:not(.edge-context):not(.edge-focus) .react-flow__edge-path {
   stroke: var(--edge-far) !important;
   stroke-width: 1.3 !important;
@@ -294,7 +279,6 @@ body {
 .turnframe {
   width: 100%; height: 100%;
   border: 1px dashed var(--frame);
-  border-radius: 8px;
   background: transparent;
   position: relative;
 }
@@ -302,11 +286,11 @@ body {
   position: absolute; top: -17px; left: 6px;
   font-size: 8.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
   color: var(--faint);
-  background: var(--bg); padding: 0 4px; border-radius: 3px;
+  background: var(--bg); padding: 0 4px;
   white-space: nowrap;
 }
 
-/* ---------- expanded content ---------- */
+/* ---------- expanded content (flat) ---------- */
 .ttfull { flex: none; overflow: visible; margin-top: 6px; }
 .ttfull .drow { display: flex; gap: 8px; padding: 2px 0; font-size: 10.5px; }
 .ttfull .dlabel { width: 64px; flex: none; color: var(--faint); }
@@ -315,22 +299,22 @@ body {
 .ttfull .dpre {
   margin: 0; font: 10px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace;
   color: var(--pre-text); background: var(--pre-bg);
-  border: 1px solid var(--border); border-radius: 5px; padding: 7px 8px;
+  padding: 7px 8px;
   white-space: pre-wrap; word-break: break-word;
   max-height: none; overflow: visible;
 }
 .ttfull .dpre.out { color: #7d9c86; }
 .ttfull .drawer-actions { margin-top: 8px; }
 .ttfull .drawer-actions button {
-  padding: 3px 9px; border: 1px solid var(--border); background: var(--panel);
-  color: var(--muted); border-radius: 5px; cursor: pointer; font: inherit; font-size: 10.5px;
+  padding: 4px 9px; border: 0; background: var(--panel2);
+  color: var(--muted); cursor: pointer; font: inherit; font-size: 10.5px;
 }
-.ttfull .drawer-actions button:hover { color: var(--text); border-color: var(--border-strong); }
+.ttfull .drawer-actions button:hover { background: var(--border); color: var(--text); }
 
-/* ---------- react flow chrome ---------- */
+/* ---------- react flow chrome (flat) ---------- */
 .react-flow__attribution { display: none; }
 .react-flow__controls {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--border);
   box-shadow: none;
 }
 .react-flow__controls-button {
@@ -342,7 +326,6 @@ body {
   width: 260px;
   height: 170px;
   border: 1px solid var(--border);
-  border-radius: 7px;
   background: var(--panel);
   box-shadow: none;
   overflow: hidden;
