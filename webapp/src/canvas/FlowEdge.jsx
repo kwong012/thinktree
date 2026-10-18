@@ -15,6 +15,7 @@ export default function FlowEdge(props) {
     className,
     label,
     labelStyle,
+    data,
   } = props;
 
   const [path, labelX, labelY] = getBezierPath({
@@ -26,6 +27,9 @@ export default function FlowEdge(props) {
     targetPosition,
   });
 
+  const isThread = !!data?.thread;
+  const animate = !isThread && !!data?.animate;
+
   // 每条边的相位错开，避免全图同步闪烁
   const delay = -((hash(id) % 13) / 13) * 0.95;
 
@@ -34,8 +38,8 @@ export default function FlowEdge(props) {
       <BaseEdge
         id={id}
         path={path}
-        className={`edge-flow${className ? ' ' + className : ''}`}
-        style={{ ...(style || {}), animationDelay: `${delay}s` }}
+        className={isThread ? 'edge-thread' : animate ? 'edge-flow' : 'edge-static'}
+        style={{ ...(style || {}), animationDelay: animate ? `${delay}s` : undefined }}
       />
       {label ? (
         <EdgeLabelRenderer>

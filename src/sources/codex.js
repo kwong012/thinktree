@@ -9,7 +9,6 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { EventType, Status, createTurn, addUsage } from '../schema/trace.js';
-import { findProcesses } from '../proc.js';
 import {
   safeJson,
   readFirstLine,
@@ -21,6 +20,7 @@ import {
   timeMs,
   dirName,
   shortId,
+  pickLive,
 } from './util.js';
 
 const ROOT = process.env.CODEX_SESSION_DIR || join(homedir(), '.codex', 'sessions');
@@ -67,14 +67,8 @@ export function createCodexSource() {
     processPatterns: PATTERNS,
 
     listLive(procSnapshot) {
-      const processes = findProcesses(procSnapshot?.processes || [], PATTERNS);
-      if (!processes.length) return { processes: [], sessions: [] };
       const { list } = scan();
-      const now = Date.now();
-      return {
-        processes,
-        sessions: list.filter((s, i) => i === 0 || now - s.updatedAt <= ALIVE_WINDOW),
-      };
+      return pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
     },
 
     getSession(id) {

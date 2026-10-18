@@ -29,7 +29,7 @@ export function createRegistry() {
           interface: src.interface,
           description: src.description,
           available: src.available,
-          alive: processes.length > 0,
+          alive: processes.length > 0 || sessions.length > 0,
           focused,
           processes,
           sessions,

@@ -12,6 +12,7 @@
   --node-bg: #10161e;
   --node-border: #1f2a37;
   --edge: #45586e;
+  --edge-far: #6c86a2;
   --edge-cross: #6f8db3;
   --grid: #17202b;
   --chip-bg: #1b2634;
@@ -24,6 +25,8 @@
   --sel: #58a6ff;
   --highlight: #f6b45a;
   --focus: #f472b6;
+  --frame: #2dd4bf;
+  --thread: #2dd4bf;
 }
 
 :root[data-theme="light"] {
@@ -38,6 +41,7 @@
   --node-bg: #ffffff;
   --node-border: #d5dde7;
   --edge: #a5b4c4;
+  --edge-far: #7f95ab;
   --edge-cross: #5b7ea8;
   --grid: #e4eaf1;
   --chip-bg: #eef2f7;
@@ -50,6 +54,8 @@
   --sel: #2563eb;
   --highlight: #a45f00;
   --focus: #be185d;
+  --frame: #0f766e;
+  --thread: #0f766e;
 }
 
 * { box-sizing: border-box; }
@@ -407,3 +413,89 @@ body {
 .react-flow__node-tt.dragging {
   transition: none;
 }
+
+/* 非活动边：静态虚线（不再跑动画，降低渲染压力） */
+.react-flow__edge-path.edge-static {
+  fill: none;
+  stroke-dasharray: 5 5;
+}
+
+/* ---------- 远档轻量胶囊 ---------- */
+.ttmini {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 6px;
+  background: var(--node-bg);
+  border-left: 2px solid var(--c);
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 9px;
+}
+.ttminidot { width: 6px; height: 6px; border-radius: 50%; background: var(--c); flex: none; }
+.ttminikind { color: var(--muted); white-space: nowrap; }
+.ttminititle {
+  color: var(--text); font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* 远档形状更突出 */
+.ttmini {
+  background: var(--panel2);
+  border: 1px solid var(--node-border);
+  border-left: 3px solid var(--c);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+.ttminidot { width: 7px; height: 7px; }
+.ttminikind { color: var(--c); font-weight: 700; }
+.ttminititle { font-size: 9px; }
+
+/* 连线保持屏幕像素宽度：缩到很远也看得见 */
+.react-flow__edge-path {
+  vector-effect: non-scaling-stroke;
+}
+
+/* 远档：按类型染色的色块，结构更突出 */
+.ttmini {
+  background: color-mix(in srgb, var(--c) 20%, var(--node-bg));
+  border-color: color-mix(in srgb, var(--c) 45%, var(--node-border));
+}
+
+/* 远档连线更亮更粗，关系清晰 */
+.lod-far .react-flow__edge:not(.edge-context):not(.edge-focus) .react-flow__edge-path {
+  stroke: var(--edge-far) !important;
+  stroke-width: 2.2 !important;
+}
+
+/* ---------- 提问主线（实线） ---------- */
+.react-flow__edge-path.edge-thread {
+  stroke-dasharray: none;
+  stroke: var(--thread) !important;
+}
+
+/* ---------- 整轮包络框 ---------- */
+.react-flow__node-turnframe { pointer-events: none; }
+.turnframe {
+  width: 100%; height: 100%;
+  border: 1px dashed var(--frame);
+  border-radius: 14px;
+  background: transparent;
+  position: relative;
+}
+.turnframe-label {
+  position: absolute; top: -18px; left: 8px;
+  font-size: 10px; font-weight: 600; color: var(--frame);
+  background: var(--bg); padding: 0 4px; border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ---------- 可交互小地图 ---------- */
+.react-flow__minimap.tt-minimap {
+  width: 260px;
+  height: 170px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px var(--shadow);
+  overflow: hidden;
+}
+.react-flow__minimap.tt-minimap svg { display: block; }

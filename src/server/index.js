@@ -165,9 +165,23 @@ function stream(req, res) {
           }
           if (!sess) continue;
           const sig = sessionSig(sess);
-          if (lastSessions.get(s.id) !== sig) {
-            lastSessions.set(s.id, sig);
-            send('session', { ...sess, sourceId: agent.sourceId });
+          const prev = lastSessions.get(s.id);
+          if (!prev || prev.sig !== sig) {
+            const turnCount = sess.turns?.length || 0;
+            // 轮数不变时只推最后一条（通常是正在增长的那一轮），避免每次传几 MB。
+            if (!prev || prev.turnCount !== turnCount) {
+              send('session', { ...sess, sourceId: agent.sourceId });
+            } else {
+              const lastTurn = sess.turns?.[sess.turns.length - 1] || null;
+              send('session', {
+                id: sess.id,
+                sourceId: agent.sourceId,
+                updatedAt: sess.updatedAt,
+                partial: true,
+                turns: lastTurn ? [lastTurn] : [],
+              });
+            }
+            lastSessions.set(s.id, { sig, turnCount });
           }
         }
       }

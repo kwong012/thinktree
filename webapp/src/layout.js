@@ -25,6 +25,7 @@ export function buildGraph(session, { turnIndex } = {}) {
   const nodes = [];
   const edges = [];
   let prevTurnLast = null;
+  let prevPrompt = null;
 
   const turns = turnIndex == null
     ? session?.turns || []
@@ -64,6 +65,19 @@ export function buildGraph(session, { turnIndex } = {}) {
     const promptEv = (turn.events || []).find((e) => e.type === 'prompt');
     if (promptEv) {
       rootId = add('send', promptEv, prevTurnLast, null, !!prevTurnLast);
+
+      // 用户提问之间的「主线」：把每次发送串起来。
+      if (prevPrompt) {
+        edges.push({
+          id: `${prevPrompt}->${rootId}-thread`,
+          source: prevPrompt,
+          target: rootId,
+          type: 'smoothstep',
+          data: { thread: true },
+          style: { stroke: '#2dd4bf', strokeWidth: 1.6 },
+        });
+      }
+      prevPrompt = rootId;
     }
 
     for (const e of turn.events || []) {

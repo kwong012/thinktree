@@ -25,10 +25,11 @@ import {
   timeMs,
   dirName,
   shortId,
+  pickLive,
 } from './util.js';
 
 const ROOT = process.env.PI_SESSION_DIR || join(homedir(), '.pi', 'agent', 'sessions');
-const PATTERNS = [/^pi(\.exe)?$/i];
+const PATTERNS = [/^pi(\.exe)?$/i, /pi-launcher\.js/i, /pi-coding-agent/i];
 const ALIVE_WINDOW = 30 * 60_000;
 
 let cache = { at: 0, list: [], byId: new Map() };
@@ -68,14 +69,8 @@ export function createPiSource() {
     processPatterns: PATTERNS,
 
     listLive(procSnapshot) {
-      const processes = findProcesses(procSnapshot?.processes || [], PATTERNS);
-      if (!processes.length) return { processes: [], sessions: [] };
       const { list } = scan();
-      const now = Date.now();
-      return {
-        processes,
-        sessions: list.filter((s, i) => i === 0 || now - s.updatedAt <= ALIVE_WINDOW),
-      };
+      return pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
     },
 
     getSession(id) {

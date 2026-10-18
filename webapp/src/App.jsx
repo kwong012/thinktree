@@ -34,7 +34,22 @@ export default function App() {
         setFocused(snap.focused || null);
       },
       onSession: (sess) => {
-        setSessions((prev) => ({ ...prev, [`${sess.sourceId}:${sess.id}`]: sess }));
+        setSessions((prev) => {
+          const key = `${sess.sourceId}:${sess.id}`;
+          const old = prev[key];
+          if (!sess.partial || !old) return { ...prev, [key]: sess };
+
+          const map = new Map((old.turns || []).map((t) => [t.index, t]));
+          for (const t of sess.turns || []) map.set(t.index, t);
+          return {
+            ...prev,
+            [key]: {
+              ...old,
+              updatedAt: sess.updatedAt ?? old.updatedAt,
+              turns: [...map.values()].sort((a, b) => a.index - b.index),
+            },
+          };
+        });
       },
       onStatus: setStatus,
     });

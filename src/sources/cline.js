@@ -10,8 +10,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { EventType, Status, createTurn, addUsage } from '../schema/trace.js';
-import { findProcesses } from '../proc.js';
-import { readJson, mtime, usageOf, contentText, shortId } from './util.js';
+import { readJson, mtime, usageOf, contentText, shortId, pickLive } from './util.js';
 
 const APPDATA = process.env.APPDATA || '';
 const CANDIDATES = [
@@ -78,14 +77,8 @@ export function createClineSource() {
     processPatterns: PATTERNS,
 
     listLive(procSnapshot) {
-      const processes = findProcesses(procSnapshot?.processes || [], PATTERNS);
-      if (!processes.length) return { processes: [], sessions: [] };
       const { list } = scan();
-      const now = Date.now();
-      return {
-        processes,
-        sessions: list.filter((s, i) => i === 0 || now - s.updatedAt <= ALIVE_WINDOW),
-      };
+      return pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
     },
 
     getSession(id) {

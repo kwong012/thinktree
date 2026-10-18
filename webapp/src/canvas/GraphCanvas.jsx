@@ -12,16 +12,26 @@ import {
 import '@xyflow/react/dist/style.css';
 import NodeCard from './NodeCard.jsx';
 import FlowEdge from './FlowEdge.jsx';
+import TurnFrame from './TurnFrame.jsx';
 import { LodCtx, LangCtx, ExpandCtx } from './context.js';
 import { buildGraph, layoutGraph, NODE_SIZE, MIN_GAP } from '../layout.js';
 import { lodFor } from '../lod.js';
 import { t } from '../i18n.js';
 
-const nodeTypes = { tt: NodeCard };
+const nodeTypes = { tt: NodeCard, turnframe: TurnFrame };
 const edgeTypes = { tt: FlowEdge };
 const LOD_KEY = { far: 'lodFar', mid: 'lodMid', near: 'lodNear' };
 
 const EXPANDED_W = 520;
+
+const MINI_COLOR = {
+  send: '#4c9aff',
+  context: '#7c8794',
+  model: '#a78bfa',
+  reason: '#c084fc',
+  tool: '#d6a02a',
+  answer: '#34c46b',
+};
 
 function estimateExpandedHeight(data) {
   const d = data.ev?.data || {};
@@ -52,10 +62,14 @@ function Inner({ session, theme }) {
   const [lod, setLod] = useState('near');
   const [expandedId, setExpandedId] = useState(null);
   const [measuredH, setMeasuredH] = useState(0);
+  const [showMini, setShowMini] = useState(true);
+  const [framedTurn, setFramedTurn] = useState(null);
+  const [frameRect, setFrameRect] = useState(null);
   // 用户手动拖拽后的位置（跨实时刷新保留）
   const posRef = useRef(new Map());
   const [dragVersion, setDragVersion] = useState(0);
   const dragTick = useRef(0);
+  const dragGuard = useRef(0);
 
   // 拖动时被压到的框即时让位（无需等松手）。
   const avoidOverlap = (dragged) => {
@@ -72,6 +86,7 @@ function Inner({ session, theme }) {
       let changed = false;
       const next = ns.map((n) => {
         if (n.id === dragged.id) return n;
+        if (framedTurn != null && (n.data?.turnIndex ?? -1) === framedTurn) return n;
         const w = n.measured?.width ?? n.width ?? 240;
         const h = n.measured?.height ?? n.height ?? 100;
         const ox = Math.min(ax + dw, n.position.x + w) - Math.max(ax, n.position.x) + MIN_GAP;
@@ -120,6 +135,83 @@ function Inner({ session, theme }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
+  // 包络框：跟随该轮所有节点的当前位置（拖动时实时更新）。
+  useEffect(() => {
+    if (framedTurn == null) {
+      setFrameRect(null);
+      return;
+    }
+    const group = nodes.filter((n) => n.type === 'tt' && (n.data?.turnIndex ?? -1) === framedTurn);
+    if (!group.length) {
+      setFrameRect(null);
+      return;
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const n of group) {
+      const w = n.measured?.width ?? n.width ?? n.style?.width ?? 240;
+      const h = n.measured?.height ?? n.height ?? n.style?.height ?? 100;
+      minX = Math.min(minX, n.position.x);
+      minY = Math.min(minY, n.position.y);
+      maxX = Math.max(maxX, n.position.x + w);
+      maxY = Math.max(maxY, n.position.y + h);
+    }
+    const pad = 26;
+    const rect = {
+      x: minX - pad,
+      y: minY - pad - 16,
+      w: maxX - minX + pad * 2,
+      h: maxY - minY + pad * 2 + 16,
+    };
+    setFrameRect((prev) =>
+      prev &&
+      Math.abs(prev.x - rect.x) < 0.5 &&
+      Math.abs(prev.y - rect.y) < 0.5 &&
+      Math.abs(prev.w - rect.w) < 0.5 &&
+      Math.abs(prev.h - rect.h) < 0.5
+        ? prev
+        : rect,
+    );
+  }, [nodes, framedTurn]);
+
+  const frameNode = useMemo(
+    () =>
+      framedTurn != null && frameRect
+        ? {
+            id: `turnframe-${framedTurn}`,
+            type: 'turnframe',
+            position: { x: frameRect.x, y: frameRect.y },
+            style: { width: frameRect.w, height: frameRect.h, zIndex: -1 },
+            data: { turnIndex: framedTurn },
+            draggable: false,
+            selectable: false,
+            connectable: false,
+            focusable: false,
+            deletable: false,
+          }
+        : null,
+    [framedTurn, frameRect],
+  );
+
+  const displayNodes = useMemo(
+    () => (frameNode ? [frameNode, ...nodes] : nodes),
+    [frameNode, nodes],
+  );
+
+  // 框选整轮：选中该轮全部节点，拖动时整体移动。
+  useEffect(() => {
+    if (framedTurn == null) return;
+    setNodes((ns) =>
+      ns.map((n) =>
+        n.type === 'tt'
+          ? { ...n, selected: (n.data?.turnIndex ?? -1) === framedTurn }
+          : n,
+      ),
+    );
+  }, [framedTurn, setNodes]);
+
   // 同步节点/边；展开的节点变大并置顶；最后一条流水线的连线高亮并流动。
   useEffect(() => {
     const turnById = new Map(computed.nodes.map((n) => [n.id, n.data.turnIndex ?? 0]));
@@ -150,6 +242,7 @@ function Inner({ session, theme }) {
         const isExpanded = n.id === expandedId;
         return {
           ...n,
+          selected: framedTurn != null && (n.data.turnIndex ?? -1) === framedTurn,
           className: related.has(n.id) ? 'focus-rel' : undefined,
           zIndex: isExpanded ? 1000 : undefined,
           width: isExpanded ? EXPANDED_W : w,
@@ -185,11 +278,14 @@ function Inner({ session, theme }) {
             targetNode?.data.kind === 'model');
 
         const focusEdge = !!(expandedId && (e.source === expandedId || e.target === expandedId));
+        const skeleton = cross || !!e.data?.thread || active;
 
         return {
           ...e,
           type: 'tt',
           animated: false,
+          hidden: lod === 'far' && !skeleton,
+          data: { ...(e.data || {}), animate: active || focusEdge },
           className: focusEdge ? 'edge-focus' : contextEdge ? 'edge-context' : undefined,
           label: cross ? t(lang, 'contextLabel') : undefined,
           labelStyle: { fill: 'var(--muted)', fontSize: 9 },
@@ -212,7 +308,7 @@ function Inner({ session, theme }) {
         };
       }),
     );
-  }, [computed, expandedId, expandedH, lang, setNodes, setEdges]);
+  }, [computed, expandedId, expandedH, framedTurn, lang, lod, setNodes, setEdges]);
 
   // 展开后，等新布局生效再把该框居中。
   useEffect(() => {
@@ -267,14 +363,37 @@ function Inner({ session, theme }) {
   }, [session?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodeClick = (event, node) => {
-    // Shift/Ctrl/Cmd 用于多选，不触发展开
+    if (Date.now() - dragGuard.current < 250) return;
+    // Shift/Ctrl/Cmd 用于多选，不触发交互
     if (event.shiftKey || event.metaKey || event.ctrlKey) return;
+    if (node.type !== 'tt') return;
+
+    // 点击「提问」：显示/收起整轮包络框
+    if (node.data.kind === 'send') {
+      const ti = node.data.turnIndex;
+      setFramedTurn((prev) => (prev === ti ? null : ti));
+      setExpandedId(null);
+      return;
+    }
+
+    // 包络框内点击其他框：保持整轮选中，便于整体拖动
+    if (framedTurn != null && (node.data.turnIndex ?? -1) === framedTurn) {
+      setNodes((ns) =>
+        ns.map((n) =>
+          n.type === 'tt'
+            ? { ...n, selected: (n.data?.turnIndex ?? -1) === framedTurn }
+            : n,
+        ),
+      );
+      return;
+    }
+
     setExpandedId((prev) => (prev === node.id ? null : node.id));
   };
 
   return (
     <div
-      className="canvas-wrap"
+      className={`canvas-wrap lod-${lod}`}
       onDoubleClick={(e) => {
         if (e.target.closest?.('.drawer')) return;
         centerLast(1, 450);
@@ -291,6 +410,9 @@ function Inner({ session, theme }) {
           <i /> {t(lang, 'ctxLegend')}
         </span>
         <div className="spacer" />
+        <button onClick={() => setShowMini((v) => !v)}>
+          {showMini ? t(lang, 'hideMap') : t(lang, 'map')}
+        </button>
         <button onClick={() => rf.fitView({ padding: 0.12, duration: 450 })}>
           {t(lang, 'fitAll')}
         </button>
@@ -300,7 +422,7 @@ function Inner({ session, theme }) {
       <ExpandCtx.Provider value={expandedId}>
         <LodCtx.Provider value={lod}>
           <ReactFlow
-            nodes={nodes}
+            nodes={displayNodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -311,14 +433,21 @@ function Inner({ session, theme }) {
               setLod((prev) => (prev === l ? prev : l));
             }}
             onNodeClick={onNodeClick}
+            onNodeDragStart={() => {
+              dragGuard.current = Date.now();
+            }}
             onNodeDrag={(_, node) => avoidOverlap(node)}
             onNodeDragStop={(_, node, dragged) => {
+              dragGuard.current = Date.now();
               for (const n of dragged?.length ? dragged : [node]) {
                 posRef.current.set(n.id, n.position);
               }
               setDragVersion((v) => v + 1);
             }}
-            onPaneClick={() => setExpandedId(null)}
+            onPaneClick={() => {
+              setExpandedId(null);
+              setFramedTurn(null);
+            }}
             onInit={(inst) => setLod(lodFor(inst.getZoom()))}
             minZoom={0.02}
             maxZoom={2.5}
@@ -327,11 +456,22 @@ function Inner({ session, theme }) {
             elementsSelectable
             selectionOnDrag
             panOnDrag={[1, 2]}
+            onlyRenderVisibleElements
             colorMode={theme}
           >
             <Background color="var(--grid)" gap={22} size={1} />
             <Controls showInteractive={false} />
-            <MiniMap pannable zoomable nodeColor="var(--muted)" maskColor="var(--minimap-mask)" />
+            {showMini ? (
+              <MiniMap
+                pannable
+                zoomable
+                className="tt-minimap"
+                nodeColor={(n) => MINI_COLOR[n.data?.kind] || 'var(--muted)'}
+                nodeStrokeWidth={0}
+                nodeBorderRadius={3}
+                maskColor="var(--minimap-mask)"
+              />
+            ) : null}
           </ReactFlow>
         </LodCtx.Provider>
       </ExpandCtx.Provider>

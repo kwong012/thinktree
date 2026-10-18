@@ -217,13 +217,26 @@ function Full({ data, lang, raw, onToggleRaw }) {
   );
 }
 
-export default function NodeCard({ id, data, selected }) {
+function NodeCard({ id, data, selected }) {
   const lod = useContext(LodCtx);
   const lang = useContext(LangCtx);
   const expandedId = useContext(ExpandCtx);
   const [raw, setRaw] = useState(false);
 
   const expanded = expandedId === id;
+
+  // 远档：轻量胶囊（保留类型与标题信息，降低渲染开销）
+  if (lod === 'far') {
+    return (
+      <div className={`ttmini kind-${data.kind}`}>
+        <Handle type="target" position={Position.Left} className="tt-handle" />
+        <Handle type="source" position={Position.Right} className="tt-handle" />
+        <span className="ttminidot" />
+        <span className="ttminikind">{t(lang, `kind.${data.kind}`)}</span>
+        {titleOf(data) ? <span className="ttminititle">{titleOf(data)}</span> : null}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -250,3 +263,7 @@ export default function NodeCard({ id, data, selected }) {
     </div>
   );
 }
+
+export default React.memo(NodeCard, (prev, next) => {
+  return prev.id === next.id && prev.data === next.data && prev.selected === next.selected;
+});

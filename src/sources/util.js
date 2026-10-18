@@ -1,6 +1,25 @@
 /** 源适配器共用工具。 */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { findProcesses } from '../proc.js';
+
+/**
+ * 统一判定「存活」：
+ *   进程（名字或命令行）匹配，或最近 recentWindow 内仍有会话写入
+ *   （npm 安装的 CLI 常以 node 运行，命令行匹配不到时用活跃度兜底）。
+ */
+export function pickLive(procSnapshot, patterns, sessions, opts = {}) {
+  const { aliveWindow = 30 * 60_000, recentWindow = 90_000 } = opts;
+  const processes = findProcesses(procSnapshot?.processes || [], patterns);
+  const now = Date.now();
+  const newest = sessions[0]?.updatedAt || 0;
+  const recent = newest > 0 && now - newest <= recentWindow;
+  if (!processes.length && !recent) return { processes: [], sessions: [] };
+  return {
+    processes,
+    sessions: sessions.filter((s, i) => i === 0 || now - s.updatedAt <= aliveWindow),
+  };
+}
 
 export function safeJson(str, fallback = {}) {
   if (str == null) return fallback;

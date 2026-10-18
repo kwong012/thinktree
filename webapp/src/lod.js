@@ -3,7 +3,7 @@
 export const LOD = { FAR: 'far', MID: 'mid', NEAR: 'near' };
 
 export function lodFor(zoom) {
-  if (zoom < 0.42) return LOD.FAR;
+  if (zoom < 0.16) return LOD.FAR;
   if (zoom < 0.8) return LOD.MID;
   return LOD.NEAR;
 }

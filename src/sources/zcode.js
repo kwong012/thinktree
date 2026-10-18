@@ -9,8 +9,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { EventType, Status, createTurn, addUsage, emptyUsage } from '../schema/trace.js';
-import { findProcesses } from '../proc.js';
-import { safeJson, usageOf, shortId } from './util.js';
+import { safeJson, usageOf, shortId, pickLive } from './util.js';
 
 const DB_PATH = process.env.ZCODE_DB || join(homedir(), '.zcode', 'cli', 'db', 'db.sqlite');
 const PATTERNS = [/^zcode/i];
@@ -40,9 +39,6 @@ export function createZcodeSource() {
     processPatterns: PATTERNS,
 
     listLive(procSnapshot) {
-      const processes = findProcesses(procSnapshot?.processes || [], PATTERNS);
-      if (!processes.length) return { processes: [], sessions: [] };
-
       let rows = [];
       try {
         rows = getDb()
@@ -51,10 +47,9 @@ export function createZcodeSource() {
           )
           .all();
       } catch {
-        return { processes, sessions: [] };
+        return { processes: [], sessions: [] };
       }
 
-      const now = Date.now();
       const sessions = rows.map((r) => ({
         id: r.id,
         title: r.title || r.id,
@@ -65,10 +60,7 @@ export function createZcodeSource() {
         updatedAt: r.time_updated,
       }));
 
-      return {
-        processes,
-        sessions: sessions.filter((s, i) => i === 0 || now - s.updatedAt <= ALIVE_WINDOW),
-      };
+      return pickLive(procSnapshot, PATTERNS, sessions, { aliveWindow: ALIVE_WINDOW });
     },
 
     getSession(id) {

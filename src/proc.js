@@ -34,7 +34,12 @@ while ($true) {
   [void][TTWin32]::GetWindowText($fg, $sb, 512)
   $fname = ""
   try { $fname = (Get-Process -Id $fpid -ErrorAction Stop).ProcessName } catch {}
-  $procs = @(Get-Process -ErrorAction SilentlyContinue | ForEach-Object { @{ pid = $_.Id; name = $_.ProcessName } })
+  $cmds = @{}
+  try {
+    Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='python.exe' OR Name='pythonw.exe' OR Name='bun.exe' OR Name='deno.exe'" |
+      ForEach-Object { $cmds[[int]$_.ProcessId] = $_.CommandLine }
+  } catch {}
+  $procs = @(Get-Process -ErrorAction SilentlyContinue | ForEach-Object { @{ pid = $_.Id; name = $_.ProcessName; cmd = $cmds[[int]$_.Id] } })
   $obj = @{ focused = @{ pid = [int]$fpid; name = $fname; title = $sb.ToString() }; processes = $procs }
   $json = $obj | ConvertTo-Json -Depth 4 -Compress
   [Console]::Out.WriteLine([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json)))
@@ -74,7 +79,7 @@ export function createProcMonitor() {
           const obj = JSON.parse(Buffer.from(line, 'base64').toString('utf8'));
           snapshot = {
             focused: obj.focused?.name ? obj.focused : null,
-            processes: (obj.processes || []).map((p) => ({ pid: p.pid, name: p.name })),
+            processes: (obj.processes || []).map((p) => ({ pid: p.pid, name: p.name, cmd: p.cmd })),
             at: Date.now(),
           };
         } catch {
@@ -113,12 +118,20 @@ export function createProcMonitor() {
   };
 }
 
-/** 名字是否匹配任一进程模式（RegExp 或字符串）。 */
+/** 名字或命令行是否匹配任一模式（RegExp 或字符串）。 */
 export function matchesProcess(processes, patterns) {
-  return processes.some((p) => patterns.some((pat) => (pat instanceof RegExp ? pat.test(p.name) : p.name === pat)));
+  return processes.some((p) =>
+    patterns.some((pat) =>
+      pat instanceof RegExp ? pat.test(p.name) || pat.test(p.cmd || '') : p.name === pat,
+    ),
+  );
 }
 
-/** 取出匹配到的进程列表。 */
+/** 取出匹配到的进程列表（支持按命令行匹配 npm 安装的 CLI）。 */
 export function findProcesses(processes, patterns) {
-  return processes.filter((p) => patterns.some((pat) => (pat instanceof RegExp ? pat.test(p.name) : p.name === pat)));
+  return processes.filter((p) =>
+    patterns.some((pat) =>
+      pat instanceof RegExp ? pat.test(p.name) || pat.test(p.cmd || '') : p.name === pat,
+    ),
+  );
 }

@@ -51,6 +51,9 @@ const DICT = {
     lodMid: '中 · 摘要',
     lodNear: '近 · 细节',
     ctxLegend: '高亮 · 上下文检索',
+    map: '小地图',
+    turnFrame: '第 {n} 轮 · 问答',
+    hideMap: '隐藏地图',
     kind: {
       send: '发送',
       context: '上下文',
@@ -110,6 +113,9 @@ const DICT = {
     lodMid: 'Mid · summary',
     lodNear: 'Near · detail',
     ctxLegend: 'Highlight · context retrieval',
+    map: 'Map',
+    turnFrame: 'Turn {n} · Q&A',
+    hideMap: 'Hide map',
     kind: {
       send: 'Prompt',
       context: 'Context',

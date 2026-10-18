@@ -8,7 +8,7 @@
  */
 import { createOpencodeAdapter } from '../adapters/opencode.js';
 import { mcpServerNames } from '../adapters/opencode-config.js';
-import { findProcesses } from '../proc.js';
+import { pickLive } from './util.js';
 
 const PROCESS_PATTERNS = [/^opencode/i];
 
@@ -25,14 +25,8 @@ export function createOpencodeSource({ aliveWindowMs = 30 * 60_000 } = {}) {
     processPatterns: PROCESS_PATTERNS,
 
     listLive(procSnapshot) {
-      const processes = findProcesses(procSnapshot?.processes || [], PROCESS_PATTERNS);
-      if (!processes.length) return { processes: [], sessions: [] };
-
       const all = adapter.listSessions({ limit: 100 });
-      const now = Date.now();
-      // 进程存活时：展示最近会话 + 活跃窗口内更新过的会话。
-      const sessions = all.filter((s, i) => i === 0 || (s.updatedAt && now - s.updatedAt <= aliveWindowMs));
-      return { processes, sessions };
+      return pickLive(procSnapshot, PROCESS_PATTERNS, all, { aliveWindow: aliveWindowMs });
     },
 
     getSession: adapter.getSession,

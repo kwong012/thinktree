@@ -9,7 +9,6 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { EventType, Status, createTurn, addUsage } from '../schema/trace.js';
-import { findProcesses } from '../proc.js';
 import {
   readJson,
   readJsonl,
@@ -18,11 +17,12 @@ import {
   contentText,
   dirName,
   shortId,
+  pickLive,
 } from './util.js';
 
 const ROOT = process.env.KIMI_CODE_HOME || join(homedir(), '.kimi-code');
 const SESSIONS = join(ROOT, 'sessions');
-const PATTERNS = [/^kimi/i];
+const PATTERNS = [/^kimi/i, /kimi[-_]code/i];
 const ALIVE_WINDOW = 30 * 60_000;
 
 let cache = { at: 0, list: [], byId: new Map(), workDirs: new Map() };
@@ -100,14 +100,8 @@ export function createKimiSource() {
     processPatterns: PATTERNS,
 
     listLive(procSnapshot) {
-      const processes = findProcesses(procSnapshot?.processes || [], PATTERNS);
-      if (!processes.length) return { processes: [], sessions: [] };
       const { list } = scan();
-      const now = Date.now();
-      return {
-        processes,
-        sessions: list.filter((s, i) => i === 0 || now - s.updatedAt <= ALIVE_WINDOW),
-      };
+      return pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
     },
 
     getSession(id) {
