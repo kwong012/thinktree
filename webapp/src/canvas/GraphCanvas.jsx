@@ -51,16 +51,59 @@ function Inner({ session, theme }) {
   const lang = useContext(LangCtx);
   const [lod, setLod] = useState('near');
   const [expandedId, setExpandedId] = useState(null);
+  const [measuredH, setMeasuredH] = useState(0);
   // 用户手动拖拽后的位置（跨实时刷新保留）
   const posRef = useRef(new Map());
   const [dragVersion, setDragVersion] = useState(0);
+  const dragTick = useRef(0);
+
+  // 拖动时被压到的框即时让位（无需等松手）。
+  const avoidOverlap = (dragged) => {
+    const now = performance.now();
+    if (now - dragTick.current < 55) return;
+    dragTick.current = now;
+
+    const ax = dragged.position.x;
+    const ay = dragged.position.y;
+    const dw = dragged.measured?.width ?? dragged.width ?? 240;
+    const dh = dragged.measured?.height ?? dragged.height ?? 100;
+
+    setNodes((ns) => {
+      let changed = false;
+      const next = ns.map((n) => {
+        if (n.id === dragged.id) return n;
+        const w = n.measured?.width ?? n.width ?? 240;
+        const h = n.measured?.height ?? n.height ?? 100;
+        const ox = Math.min(ax + dw, n.position.x + w) - Math.max(ax, n.position.x) + 14;
+        const oy = Math.min(ay + dh, n.position.y + h) - Math.max(ay, n.position.y) + 14;
+        if (ox <= 0 || oy <= 0) return n;
+
+        changed = true;
+        let pos;
+        if (ox < oy) {
+          const dir = ax + dw / 2 < n.position.x + w / 2 ? 1 : -1;
+          pos = { x: n.position.x + dir * ox, y: n.position.y };
+        } else {
+          const dir = ay + dh / 2 < n.position.y + h / 2 ? 1 : -1;
+          pos = { x: n.position.x, y: n.position.y + dir * oy };
+        }
+        posRef.current.set(n.id, pos);
+        return { ...n, position: pos };
+      });
+      return changed ? next : ns;
+    });
+  };
+
+  useEffect(() => {
+    setMeasuredH(0);
+  }, [expandedId]);
 
   const base = useMemo(() => buildGraph(session), [session]);
   const expandedNode = useMemo(
     () => (expandedId ? base.nodes.find((n) => n.id === expandedId) || null : null),
     [base, expandedId],
   );
-  const expandedH = expandedNode ? estimateExpandedHeight(expandedNode.data) : 0;
+  const expandedH = measuredH || (expandedNode ? estimateExpandedHeight(expandedNode.data) : 0);
 
   // 展开时用「放大后的尺寸」重新布局，周围节点自动避让。
   const computed = useMemo(
@@ -91,12 +134,23 @@ function Inner({ session, theme }) {
         (n.data.ev?.data?.response?.usage?.cacheRead || 0) > 0,
     );
 
+    // 展开节点及其直接相连的上下文关系（独立配色，避免与既有高亮重复）
+    const related = new Set();
+    if (expandedId) {
+      related.add(expandedId);
+      for (const e of computed.edges) {
+        if (e.source === expandedId) related.add(e.target);
+        if (e.target === expandedId) related.add(e.source);
+      }
+    }
+
     setNodes(
       computed.nodes.map((n) => {
         const [w, h] = NODE_SIZE[n.data.kind] || [220, 90];
         const isExpanded = n.id === expandedId;
         return {
           ...n,
+          className: related.has(n.id) ? 'focus-rel' : undefined,
           zIndex: isExpanded ? 1000 : undefined,
           width: isExpanded ? EXPANDED_W : w,
           height: isExpanded ? undefined : h,
@@ -130,26 +184,30 @@ function Inner({ session, theme }) {
             sourceNode?.data.kind === 'send' &&
             targetNode?.data.kind === 'model');
 
+        const focusEdge = !!(expandedId && (e.source === expandedId || e.target === expandedId));
+
         return {
           ...e,
           type: 'tt',
           animated: false,
-          className: contextEdge ? 'edge-context' : undefined,
+          className: focusEdge ? 'edge-focus' : contextEdge ? 'edge-context' : undefined,
           label: cross ? t(lang, 'contextLabel') : undefined,
           labelStyle: { fill: 'var(--muted)', fontSize: 9 },
           labelBgStyle: { fill: 'var(--bg)', fillOpacity: 0.85 },
           labelBgPadding: [3, 2],
           labelBgBorderRadius: 4,
           style: {
-            stroke: contextEdge
-              ? 'var(--highlight)'
-              : active
-                ? 'var(--accent)'
-                : cross
-                  ? 'var(--edge-cross)'
-                  : 'var(--edge)',
-            strokeWidth: contextEdge ? 3.2 : active ? 2.6 : cross ? 2.2 : 1.8,
-            strokeDasharray: cross && !contextEdge ? '5 4' : undefined,
+            stroke: focusEdge
+              ? 'var(--focus)'
+              : contextEdge
+                ? 'var(--highlight)'
+                : active
+                  ? 'var(--accent)'
+                  : cross
+                    ? 'var(--edge-cross)'
+                    : 'var(--edge)',
+            strokeWidth: focusEdge ? 3.6 : contextEdge ? 3.2 : active ? 2.6 : cross ? 2.2 : 1.8,
+            strokeDasharray: cross && !contextEdge && !focusEdge ? '5 4' : undefined,
           },
         };
       }),
@@ -167,6 +225,30 @@ function Inner({ session, theme }) {
       duration: 300,
     });
   }, [expandedId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 展开框的真实高度 → 反馈给布局，让周围框避让。
+  useEffect(() => {
+    if (!expandedId) return undefined;
+    let ro;
+    let raf;
+    const attach = () => {
+      const el = document.querySelector(`.react-flow__node[data-id="${expandedId}"]`);
+      if (!el) {
+        raf = requestAnimationFrame(attach);
+        return;
+      }
+      ro = new ResizeObserver((entries) => {
+        const h = entries[0]?.contentRect?.height || 0;
+        if (h > 40) setMeasuredH((prev) => (Math.abs(prev - h) > 8 ? h : prev));
+      });
+      ro.observe(el);
+    };
+    raf = requestAnimationFrame(attach);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+    };
+  }, [expandedId]);
 
   const lastNode = computed.nodes[computed.nodes.length - 1];
 
@@ -229,6 +311,7 @@ function Inner({ session, theme }) {
               setLod((prev) => (prev === l ? prev : l));
             }}
             onNodeClick={onNodeClick}
+            onNodeDrag={(_, node) => avoidOverlap(node)}
             onNodeDragStop={(_, node, dragged) => {
               for (const n of dragged?.length ? dragged : [node]) {
                 posRef.current.set(n.id, n.position);

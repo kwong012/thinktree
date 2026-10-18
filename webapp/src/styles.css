@@ -23,6 +23,7 @@
   --minimap-mask: rgba(5, 8, 12, 0.72);
   --sel: #58a6ff;
   --highlight: #f6b45a;
+  --focus: #f472b6;
 }
 
 :root[data-theme="light"] {
@@ -48,6 +49,7 @@
   --minimap-mask: rgba(243, 246, 250, 0.75);
   --sel: #2563eb;
   --highlight: #a45f00;
+  --focus: #be185d;
 }
 
 * { box-sizing: border-box; }
@@ -383,4 +385,17 @@ body {
   width: 12px; height: 12px;
   fill: none; stroke: currentColor; stroke-width: 1.2;
   stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ---------- 点击展开：该框及其上下文关系独立高亮 ---------- */
+.react-flow__node.focus-rel .ttnode {
+  outline: 1px solid var(--focus);
+  outline-offset: 1px;
+}
+.ttnode.expanded {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.react-flow__edge.edge-focus .react-flow__edge-path {
+  filter: drop-shadow(0 0 5px var(--focus));
 }
