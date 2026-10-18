@@ -109,7 +109,7 @@ function buildView(data, lang) {
     case 'model': {
       const r = d.response || {};
       if (r.reasoning) {
-        paras.push({ text: `${t(lang, 'reasoning')}?${clip(r.reasoning, 240)}`, tone: 'dim' });
+        paras.push({ text: `${t(lang, 'reasoning')}：${clip(r.reasoning, 240)}`, tone: 'dim' });
       }
       if (r.text) paras.push({ text: clip(r.text, 420), tone: 'body' });
       const chips = [];
@@ -259,7 +259,7 @@ function roundedRect(ctx, x, y, w, h, r) {
   else ctx.rect(x, y, w, h);
 }
 
-/** ? KindIcon ????????????? */
+/** Minimal line icon matching KindIcon (canvas version). */
 function drawKindIcon(ctx, kind, x, y, size, color) {
   const k = size / 12;
   ctx.save();
@@ -1661,10 +1661,26 @@ export default function CanvasStage({
       <canvas ref={animRef} className="stage-canvas stage-anim" />
       <div className="canvas-controls">
         <button onClick={() => zoomBy(1.25)} title="Zoom in" aria-label="Zoom in">
-          +
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path
+              d="M8 3v10M3 8h10"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+            />
+          </svg>
         </button>
         <button onClick={() => zoomBy(0.8)} title="Zoom out" aria-label="Zoom out">
-          ?
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path
+              d="M3 8h10"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+            />
+          </svg>
         </button>
         <button onClick={() => fitAll()} title={t(lang, 'fitAll')} aria-label={t(lang, 'fitAll')}>
           <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
