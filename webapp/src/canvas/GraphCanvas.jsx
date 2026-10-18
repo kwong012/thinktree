@@ -531,6 +531,7 @@ function Inner({ session, onRefresh, refreshing }) {
             {showMini ? (
               <MiniMap
                 position="bottom-right"
+                style={{ width: 390, height: 255 }}
                 pannable
                 zoomable
                 className="tt-minimap"
