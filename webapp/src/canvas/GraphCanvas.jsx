@@ -25,12 +25,12 @@ const LOD_KEY = { far: 'lodFar', mid: 'lodMid', near: 'lodNear' };
 const EXPANDED_W = 520;
 
 const MINI_COLOR = {
-  send: '#4c9aff',
-  context: '#7c8794',
-  model: '#a78bfa',
-  reason: '#c084fc',
-  tool: '#d6a02a',
-  answer: '#34c46b',
+  send: '#5b7fa6',
+  context: '#8a8d94',
+  model: '#7d6ea8',
+  reason: '#9a86b8',
+  tool: '#b0853f',
+  answer: '#5f8f74',
 };
 
 function estimateExpandedHeight(data) {
@@ -48,15 +48,15 @@ function estimateExpandedHeight(data) {
   return Math.min(900, 180 + Math.ceil(chars / 60) * 16);
 }
 
-export default function GraphCanvas({ session, theme }) {
+export default function GraphCanvas({ session }) {
   return (
     <ReactFlowProvider>
-      <Inner session={session} theme={theme} />
+      <Inner session={session} />
     </ReactFlowProvider>
   );
 }
 
-function Inner({ session, theme }) {
+function Inner({ session }) {
   const rf = useReactFlow();
   const lang = useContext(LangCtx);
   const [lod, setLod] = useState('near');
@@ -323,7 +323,7 @@ function Inner({ session, theme }) {
                   : cross
                     ? 'var(--edge-cross)'
                     : 'var(--edge)',
-            strokeWidth: focusEdge ? 3.6 : contextEdge ? 3.2 : active ? 2.6 : cross ? 2.2 : 1.8,
+            strokeWidth: focusEdge ? 1.8 : contextEdge ? 1.6 : active ? 1.4 : cross ? 1.2 : 1.0,
             strokeDasharray: cross && !contextEdge && !focusEdge ? '5 4' : undefined,
           },
         };
@@ -480,7 +480,7 @@ function Inner({ session, theme }) {
             selectionOnDrag
             panOnDrag={[1, 2]}
             onlyRenderVisibleElements
-            colorMode={theme}
+            colorMode="dark"
           >
             <Background color="var(--grid)" gap={22} size={1} />
             <Controls showInteractive={false} />

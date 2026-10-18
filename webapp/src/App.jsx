@@ -7,7 +7,6 @@ import { t } from './i18n.js';
 const IFACE_LABEL = { 'cli/tui': 'CLI/TUI', cli: 'CLI', tui: 'TUI', desktop: 'Desktop' };
 
 export default function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('tt-theme') || 'dark');
   const [lang, setLang] = useState(() => localStorage.getItem('tt-lang') || 'zh');
 
   const [agents, setAgents] = useState([]);
@@ -18,9 +17,8 @@ export default function App() {
   const [status, setStatus] = useState('connecting');
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('tt-theme', theme);
-  }, [theme]);
+    document.documentElement.dataset.theme = 'dark';
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
@@ -128,22 +126,6 @@ export default function App() {
           >
             {lang === 'zh' ? 'EN' : '中'}
           </button>
-          <button
-            className="iconbtn"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            title={theme === 'dark' ? t(lang, 'themeLight') : t(lang, 'themeDark')}
-          >
-            {theme === 'dark' ? (
-              <svg className="ticon" viewBox="0 0 12 12">
-                <circle cx="6" cy="6" r="2.1" />
-                <path d="M6 1.4v1.4M6 9.2v1.4M1.4 6h1.4M9.2 6h1.4M2.9 2.9l1 1M8.1 8.1l1 1M9.1 2.9l-1 1M3.9 8.1l-1 1" />
-              </svg>
-            ) : (
-              <svg className="ticon" viewBox="0 0 12 12">
-                <path d="M9.7 7.6A4.2 4.2 0 1 1 5.4 1.8a3.3 3.3 0 0 0 4.3 5.8Z" />
-              </svg>
-            )}
-          </button>
         </header>
 
         <nav className="tabs">
@@ -191,7 +173,7 @@ export default function App() {
 
         <main className="main">
           {session ? (
-            <GraphCanvas key={`${session.sourceId}:${session.id}`} session={session} theme={theme} />
+            <GraphCanvas key={`${session.sourceId}:${session.id}`} session={session} />
           ) : activeAgent ? (
             <div className="stage">{t(lang, 'loading')}</div>
           ) : (

@@ -74,7 +74,7 @@ export function buildGraph(session, { turnIndex } = {}) {
           target: rootId,
           type: 'smoothstep',
           data: { thread: true },
-          style: { stroke: '#2dd4bf', strokeWidth: 1.6 },
+          style: { stroke: 'var(--thread)', strokeWidth: 1.2 },
         });
       }
       prevPrompt = rootId;
