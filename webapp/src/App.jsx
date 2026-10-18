@@ -148,7 +148,36 @@ export default function App() {
     <LangCtx.Provider value={lang}>
       <div className="app">
         <header className="topbar">
-          <div className="brand">{t(lang, 'brand')}</div>
+          <div className="brand">
+            <svg
+              className="brand-mark"
+              width="172"
+              height="30"
+              viewBox="0 0 195 34"
+              role="img"
+              aria-label="thinkTREE"
+            >
+              <path
+                d="M18 29V13.5M9 13.5h17M26 13.5 29.5 9.5"
+                fill="none"
+                stroke="var(--text)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="9" cy="13.5" r="2.2" fill="var(--accent)" />
+              <circle cx="29.5" cy="9.5" r="2.2" fill="var(--accent)" />
+              <circle cx="18" cy="29" r="2.2" fill="var(--accent)" />
+              <text
+                x="36"
+                y="28"
+                fontSize="19"
+                fontWeight="500"
+                fill="var(--text)"
+                letterSpacing=".2"
+              >hink<tspan fill="var(--accent)" fontWeight="600">T</tspan><tspan fontWeight="600" letterSpacing=".8">REE</tspan></text>
+            </svg>
+          </div>
           <div className="status" data-status={status}>
             <span className="sdot" />
             {status === 'open'

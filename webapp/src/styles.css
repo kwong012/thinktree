@@ -49,14 +49,15 @@ body {
   background: var(--panel);
 }
 .brand {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center;
   font-weight: 650; letter-spacing: .01em;
 }
-.brand::before {
-  content: '';
-  width: 7px; height: 7px;
-  border: 1.5px solid var(--accent);
-  transform: rotate(45deg);
+.brand-mark {
+  display: block;
+  height: 30px; width: auto;
+}
+.brand-mark text {
+  font-family: "IBM Plex Sans Condensed", "Segoe UI", "Microsoft YaHei", sans-serif;
 }
 .status {
   display: flex; align-items: center; gap: 6px;
