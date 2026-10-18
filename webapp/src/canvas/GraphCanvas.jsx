@@ -40,6 +40,7 @@ export default function GraphCanvas({ session, onRefresh, refreshing }) {
     localStorage.setItem('tt-physics', m);
   };
 
+  const [measuredH, setMeasuredH] = useState(0);
   const posRef = useRef(new Map());
   const actionsRef = useRef(null);
   const apiRef = useRef(null);
@@ -60,7 +61,11 @@ export default function GraphCanvas({ session, onRefresh, refreshing }) {
     () => (expandedId ? base.nodes.find((n) => n.id === expandedId) || null : null),
     [base, expandedId],
   );
-  const expandedH = expandedNode ? estimateExpandedHeight(expandedNode.data) : 0;
+  const expandedH = measuredH || (expandedNode ? estimateExpandedHeight(expandedNode.data) : 0);
+
+  useEffect(() => {
+    setMeasuredH(0);
+  }, [expandedId]);
 
   const computed = useMemo(
     () =>
@@ -104,6 +109,7 @@ export default function GraphCanvas({ session, onRefresh, refreshing }) {
           physMode={physMode}
           showMini={showMini}
           overrides={posRef.current}
+          onExpandedHeight={(h) => setMeasuredH((prev) => (Math.abs(prev - h) > 6 ? h : prev))}
           apiRef={apiRef}
         />
 

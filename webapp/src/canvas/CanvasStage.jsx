@@ -9,6 +9,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import NodeDetail from './NodeDetail.jsx';
+import KindIcon from './KindIcon.jsx';
 import { createPhysics } from './physics.js';
 import { NODE_SIZE, MIN_GAP } from '../layout.js';
 import { lodFor } from '../lod.js';
@@ -108,7 +109,7 @@ function buildView(data, lang) {
     case 'model': {
       const r = d.response || {};
       if (r.reasoning) {
-        paras.push({ text: `${t(lang, 'reasoning')}: ${clip(r.reasoning, 240)}`, tone: 'dim' });
+        paras.push({ text: `${t(lang, 'reasoning')}?${clip(r.reasoning, 240)}`, tone: 'dim' });
       }
       if (r.text) paras.push({ text: clip(r.text, 420), tone: 'body' });
       const chips = [];
@@ -241,9 +242,76 @@ function fitText(ctx, text, maxWidth) {
 }
 
 function bezier(ctx, sx, sy, tx, ty) {
-  const mx = (sx + tx) / 2;
+  const c1 = sx + (tx - sx) * 0.25;
+  const c2 = tx - (tx - sx) * 0.25;
   ctx.moveTo(sx, sy);
-  ctx.bezierCurveTo(mx, sy, mx, ty, tx, ty);
+  ctx.bezierCurveTo(c1, sy, c2, ty, tx, ty);
+}
+
+function hashId(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function roundedRect(ctx, x, y, w, h, r) {
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
+  else ctx.rect(x, y, w, h);
+}
+
+/** ? KindIcon ????????????? */
+function drawKindIcon(ctx, kind, x, y, size, color) {
+  const k = size / 12;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(k, k);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.3;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  switch (kind) {
+    case 'send':
+      ctx.moveTo(2.4, 6); ctx.lineTo(9, 6);
+      ctx.moveTo(6.6, 3.4); ctx.lineTo(9.2, 6); ctx.lineTo(6.6, 8.6);
+      break;
+    case 'context':
+      ctx.moveTo(2.4, 3.4); ctx.lineTo(9.6, 3.4);
+      ctx.moveTo(2.4, 6); ctx.lineTo(9.6, 6);
+      ctx.moveTo(2.4, 8.6); ctx.lineTo(7, 8.6);
+      break;
+    case 'model':
+      ctx.moveTo(6, 2.2); ctx.lineTo(9.8, 6); ctx.lineTo(6, 9.8); ctx.lineTo(2.2, 6); ctx.closePath();
+      break;
+    case 'reason':
+      ctx.moveTo(6, 2.4); ctx.lineTo(6, 9.6);
+      ctx.moveTo(3.1, 4.1); ctx.lineTo(8.9, 7.9);
+      ctx.moveTo(8.9, 4.1); ctx.lineTo(3.1, 7.9);
+      break;
+    case 'tool':
+      pathRect(ctx, 2.6, 2.6, 6.8, 6.8, 1.7);
+      ctx.moveTo(7.05, 6); ctx.arc(6, 6, 1.05, 0, Math.PI * 2);
+      break;
+    case 'answer':
+      ctx.moveTo(2.8, 6.3); ctx.lineTo(4.9, 8.4); ctx.lineTo(9.2, 3.7);
+      break;
+    default:
+      ctx.moveTo(8, 6); ctx.arc(6, 6, 2, 0, Math.PI * 2);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function pathRect(ctx, x, y, w, h, r) {
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
 }
 
 function paintEdges(ctx, scene, vp, W, H, { skipAnimated, onlyAnimated, dashOffset }) {
@@ -254,7 +322,6 @@ function paintEdges(ctx, scene, vp, W, H, { skipAnimated, onlyAnimated, dashOffs
   for (const e of scene.edges) {
     if (onlyAnimated && !e.animate) continue;
     if (skipAnimated && e.animate) continue;
-    if (z < 0.16 && !e.skeleton) continue;
     const s = e.sourceNode;
     const tg = e.targetNode;
     if (!s || !tg) continue;
@@ -265,20 +332,24 @@ function paintEdges(ctx, scene, vp, W, H, { skipAnimated, onlyAnimated, dashOffs
     if (Math.max(sx, tx) < 0 || Math.min(sx, tx) > W) continue;
     if (Math.max(sy, ty) < 0 || Math.min(sy, ty) > H) continue;
 
-    const key = `${e.color}|${e.width}|${e.dashed ? 1 : 0}`;
+    const far = z < 0.16;
+    const width = far ? (e.skeleton ? 1.5 : 1.2) : e.width;
+    const alpha = far && !e.skeleton ? 0.7 : 1;
+    const key = `${e.color}|${width}|${e.dashed ? 1 : 0}|${alpha}`;
     let group = groups.get(key);
     if (!group) {
-      groups.set(key, (group = { color: e.color, width: e.width, dashed: e.dashed, segs: [] }));
+      groups.set(key, (group = { color: e.color, width, alpha, dashed: e.dashed, segs: [] }));
     }
     group.segs.push(sx, sy, tx, ty);
 
-    if (e.label && z >= 0.28) {
+    if (e.label && z >= 0.16) {
       labels.push({ text: e.label, x: (sx + tx) / 2, y: (sy + ty) / 2 });
     }
   }
 
   ctx.lineCap = 'round';
   for (const g of groups.values()) {
+    ctx.globalAlpha = g.alpha;
     ctx.strokeStyle = g.color;
     ctx.lineWidth = g.width;
     ctx.setLineDash(g.dashed ? [5, 4] : []);
@@ -291,6 +362,7 @@ function paintEdges(ctx, scene, vp, W, H, { skipAnimated, onlyAnimated, dashOffs
   }
   ctx.setLineDash([]);
   ctx.lineDashOffset = 0;
+  ctx.globalAlpha = 1;
 
   if (labels.length) {
     ctx.font = `8.5px ${SANS}`;
@@ -299,7 +371,9 @@ function paintEdges(ctx, scene, vp, W, H, { skipAnimated, onlyAnimated, dashOffs
       if (l.x < -40 || l.y < -20 || l.x > W + 40 || l.y > H + 20) continue;
       const w = ctx.measureText(l.text).width;
       ctx.fillStyle = 'rgba(0,0,0,.85)';
-      ctx.fillRect(l.x - w / 2 - 3, l.y - 7, w + 6, 12);
+      ctx.beginPath();
+      roundedRect(ctx, l.x - w / 2 - 3, l.y - 7, w + 6, 12, 4);
+      ctx.fill();
       ctx.fillStyle = '#8a8a8a';
       ctx.fillText(l.text, l.x - w / 2, l.y - 6);
     }
@@ -325,10 +399,15 @@ function drawCard(ctx, n, vp, sx, sy, sw, sh, opts) {
 
   ctx.fillStyle = NODE_BG;
   ctx.fillRect(sx, sy, sw, sh);
-  ctx.globalAlpha = 0.07;
-  ctx.fillStyle = color;
-  ctx.fillRect(sx, sy, sw, sh);
-  ctx.globalAlpha = 1;
+  if (hovered) {
+    ctx.fillStyle = '#181818';
+    ctx.fillRect(sx, sy, sw, sh);
+  } else {
+    ctx.globalAlpha = 0.07;
+    ctx.fillStyle = color;
+    ctx.fillRect(sx, sy, sw, sh);
+    ctx.globalAlpha = 1;
+  }
 
   const barW = Math.max(1.5, 4 * z);
   ctx.fillStyle = color;
@@ -338,6 +417,12 @@ function drawCard(ctx, n, vp, sx, sy, sw, sh, opts) {
     const headY = sy + Math.max(3, 6 * z);
     let cx = sx + px + barW;
     const right = sx + sw - px;
+
+    const iconSize = Math.max(8, 12 * z);
+    if (cx + iconSize + 4 < right) {
+      drawKindIcon(ctx, n.kind, cx, headY - 1, iconSize, color);
+      cx += iconSize + 4 * z;
+    }
 
     const kSize = Math.max(6, 8 * z);
     ctx.font = `700 ${kSize}px ${SANS}`;
@@ -404,7 +489,28 @@ function drawCard(ctx, n, vp, sx, sy, sw, sh, opts) {
               ? '#d0d0d0'
               : '#c7c7c7';
       ctx.textBaseline = 'top';
-      ctx.fillText(line.text, sx + px + barW, y);
+      const lx = sx + px + barW;
+      if (line.tone === 'pre' || line.tone === 'out') {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(lx - 2, y - 1, maxW + 4, lh);
+      } else if (line.tone === 'chip') {
+        const cw = Math.min(maxW, ctx.measureText(line.text).width + 8);
+        ctx.fillStyle = '#232323';
+        ctx.beginPath();
+        roundedRect(ctx, lx - 2, y - 1, cw, lh, 2);
+        ctx.fill();
+      }
+      ctx.fillStyle =
+        line.tone === 'out'
+          ? '#5ffa68'
+          : line.tone === 'chip'
+            ? '#c7c7c7'
+            : line.tone === 'dim'
+              ? '#7f7f7f'
+              : line.tone === 'pre'
+                ? '#d0d0d0'
+                : '#c7c7c7';
+      ctx.fillText(line.text, lx, y);
       y += lh;
     }
 
@@ -419,10 +525,6 @@ function drawCard(ctx, n, vp, sx, sy, sw, sh, opts) {
 
   if (selected || expanded) {
     ctx.strokeStyle = FOCUS;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(sx + 0.5, sy + 0.5, sw - 1, sh - 1);
-  } else if (hovered) {
-    ctx.strokeStyle = 'rgba(255,255,255,.32)';
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + 0.5, sy + 0.5, sw - 1, sh - 1);
   }
@@ -485,7 +587,7 @@ function drawScene(ctx, scene, vp, W, H, opts) {
   }
 
   for (const c of cards) {
-    const level = c.sw < 130 ? 1 : c.sw < 240 ? 2 : 3;
+    const level = z >= 0.8 ? 3 : 2;
     drawCard(ctx, c.n, vp, c.sx, c.sy, c.sw, c.sh, {
       lang: opts.lang,
       hovered: opts.hoverId === c.n.id,
@@ -511,6 +613,7 @@ export default function CanvasStage({
   physMode,
   showMini,
   overrides,
+  onExpandedHeight,
   apiRef,
 }) {
   const rootRef = useRef(null);
@@ -529,7 +632,10 @@ export default function CanvasStage({
   const engineRaf = useRef(0);
   const paintRaf = useRef(0);
   const animRaf = useRef(0);
+  const camRaf = useRef(0);
   const miniBaseRef = useRef(null);
+  const miniDragRef = useRef(null);
+  const lastMeasureRef = useRef(0);
   const interactingRef = useRef(false);
   const initializedRef = useRef(false);
   const lodRef = useRef('near');
@@ -540,7 +646,18 @@ export default function CanvasStage({
 
   langRef.current = lang;
   expandedRef.current = expandedId;
-  propsRef.current = { lang, expandedId, onFramedTurn, onExpand, onPane, onLod, physMode, overrides, framedTurn };
+  propsRef.current = {
+    lang,
+    expandedId,
+    onFramedTurn,
+    onExpand,
+    onPane,
+    onLod,
+    physMode,
+    overrides,
+    framedTurn,
+    onExpandedHeight,
+  };
 
   const schedulePaint = useCallback(() => {
     if (paintRaf.current) return;
@@ -566,13 +683,46 @@ export default function CanvasStage({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     const scene = sceneRef.current;
+    const vp = vpRef.current;
     if (!scene.edges.some((e) => e.animate)) return;
-    const offset = -((now % 1600) / 1600) * 11;
-    paintEdges(ctx, scene, vpRef.current, w, h, {
-      skipAnimated: false,
-      onlyAnimated: true,
-      dashOffset: offset,
-    });
+    const z = vp.zoom;
+    ctx.lineCap = 'round';
+    for (const e of scene.edges) {
+      if (!e.animate) continue;
+      const s = e.sourceNode;
+      const tg = e.targetNode;
+      if (!s || !tg) continue;
+      const sx = (s.x + s.w) * z + vp.x;
+      const sy = (s.y + s.h / 2) * z + vp.y;
+      const tx = tg.x * z + vp.x;
+      const ty = (tg.y + tg.h / 2) * z + vp.y;
+      if (Math.max(sx, tx) < 0 || Math.min(sx, tx) > w) continue;
+      if (Math.max(sy, ty) < 0 || Math.min(sy, ty) > h) continue;
+      ctx.strokeStyle = e.color;
+      ctx.lineWidth = z < 0.16 ? 1.5 : e.width;
+      ctx.setLineDash([4, 7]);
+      ctx.lineDashOffset = -(((now / 1600 + (e.phase || 0)) % 1) * 11);
+      ctx.beginPath();
+      bezier(ctx, sx, sy, tx, ty);
+      ctx.stroke();
+      if (e.label && z >= 0.16) {
+        ctx.setLineDash([]);
+        ctx.font = `8.5px ${SANS}`;
+        ctx.textBaseline = 'top';
+        const lx = (sx + tx) / 2;
+        const ly = (sy + ty) / 2;
+        const lw = ctx.measureText(e.label).width;
+        ctx.fillStyle = 'rgba(0,0,0,.85)';
+        ctx.beginPath();
+        roundedRect(ctx, lx - lw / 2 - 3, ly - 7, lw + 6, 12, 4);
+        ctx.fill();
+        ctx.fillStyle = '#8a8a8a';
+        ctx.fillText(e.label, lx - lw / 2, ly - 6);
+        ctx.setLineDash([4, 7]);
+      }
+    }
+    ctx.setLineDash([]);
+    ctx.lineDashOffset = 0;
   }, []);
 
   const animTick = useCallback(
@@ -696,9 +846,6 @@ export default function CanvasStage({
     ctx.rect(0, 0, MINI_W, MINI_H);
     ctx.rect(rx, ry, rw, rh);
     ctx.fill('evenodd');
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(rx + 0.5, ry + 0.5, rw, rh);
   }, []);
 
   const rebuildMini = useCallback(() => {
@@ -752,7 +899,9 @@ export default function CanvasStage({
       b.fillStyle = KIND_COLOR[kind] || '#9a9a9a';
       b.beginPath();
       for (let i = 0; i < rects.length; i += 4) {
-        b.rect(rects[i], rects[i + 1], rects[i + 2], rects[i + 3]);
+        const w = rects[i + 2];
+        const h = rects[i + 3];
+        roundedRect(b, rects[i], rects[i + 1], w, h, Math.min(3, w / 2, h / 2));
       }
       b.fill();
     }
@@ -768,17 +917,55 @@ export default function CanvasStage({
     drawMini();
   }, [emitLod, schedulePaint, positionDetail, drawMini]);
 
-  const centerOn = useCallback(
-    (n, zoom) => {
-      const { w, h } = sizeRef.current;
-      const vp = vpRef.current;
-      const z = clamp(zoom ?? vp.zoom, MIN_ZOOM, MAX_ZOOM);
-      vp.zoom = z;
-      vp.x = w / 2 - (n.x + n.w / 2) * z;
-      vp.y = h / 2 - (n.y + n.h / 2) * z;
-      afterViewport();
+  const cancelCamAnim = useCallback(() => {
+    if (camRaf.current) cancelAnimationFrame(camRaf.current);
+    camRaf.current = 0;
+  }, []);
+
+  const animateTo = useCallback(
+    (target, duration = 320) => {
+      cancelCamAnim();
+      const start = { ...vpRef.current };
+      if (!duration || REDUCED) {
+        vpRef.current = { ...target };
+        afterViewport();
+        return;
+      }
+      setInteracting(true);
+      const t0 = performance.now();
+      const tick = (now) => {
+        const p = Math.min(1, (now - t0) / duration);
+        const e = 1 - Math.pow(1 - p, 3);
+        vpRef.current.x = start.x + (target.x - start.x) * e;
+        vpRef.current.y = start.y + (target.y - start.y) * e;
+        vpRef.current.zoom = start.zoom + (target.zoom - start.zoom) * e;
+        afterViewport();
+        if (p < 1) {
+          camRaf.current = requestAnimationFrame(tick);
+        } else {
+          camRaf.current = 0;
+          setInteracting(false);
+        }
+      };
+      camRaf.current = requestAnimationFrame(tick);
     },
-    [afterViewport],
+    [afterViewport, cancelCamAnim, setInteracting],
+  );
+
+  const centerOn = useCallback(
+    (n, zoom, duration = 300) => {
+      const { w, h } = sizeRef.current;
+      const z = clamp(zoom ?? vpRef.current.zoom, MIN_ZOOM, MAX_ZOOM);
+      animateTo(
+        {
+          zoom: z,
+          x: w / 2 - (n.x + n.w / 2) * z,
+          y: h / 2 - (n.y + n.h / 2) * z,
+        },
+        duration,
+      );
+    },
+    [animateTo],
   );
 
   const ensureInitialView = useCallback(() => {
@@ -788,10 +975,10 @@ export default function CanvasStage({
     if (!list.length || w < 2 || h < 2) return;
     initializedRef.current = true;
     const n = list[list.length - 1];
+    cancelCamAnim();
     vpRef.current = { x: w / 2 - (n.x + n.w / 2), y: h / 2 - (n.y + n.h / 2), zoom: 1 };
-    emitLod();
-    drawMini();
-  }, [emitLod, drawMini]);
+    afterViewport();
+  }, [afterViewport, cancelCamAnim]);
 
   const fitAll = useCallback(() => {
     const list = sceneRef.current.nodes;
@@ -813,30 +1000,41 @@ export default function CanvasStage({
       MIN_ZOOM,
       1.2,
     );
-    const vp = vpRef.current;
-    vp.zoom = z;
-    vp.x = w / 2 - ((minX + maxX) / 2) * z;
-    vp.y = h / 2 - ((minY + maxY) / 2) * z;
-    afterViewport();
-  }, [afterViewport]);
+    animateTo(
+      { zoom: z, x: w / 2 - ((minX + maxX) / 2) * z, y: h / 2 - ((minY + maxY) / 2) * z },
+      450,
+    );
+  }, [animateTo]);
 
   const centerLatest = useCallback(() => {
     const list = sceneRef.current.nodes;
     if (!list.length) return;
-    centerOn(list[list.length - 1], 1);
+    centerOn(list[list.length - 1], 1, 450);
   }, [centerOn]);
 
   const jumpTo = useCallback(
     (id) => {
       const n = sceneRef.current.nodeById.get(id);
-      if (n) centerOn(n, Math.max(vpRef.current.zoom, 0.9));
+      if (n) centerOn(n, Math.max(vpRef.current.zoom, 0.9), 450);
     },
     [centerOn],
   );
 
+  const zoomBy = useCallback(
+    (factor) => {
+      const { w, h } = sizeRef.current;
+      const vp = vpRef.current;
+      const z = clamp(vp.zoom * factor, MIN_ZOOM, MAX_ZOOM);
+      const wx = (w / 2 - vp.x) / vp.zoom;
+      const wy = (h / 2 - vp.y) / vp.zoom;
+      animateTo({ zoom: z, x: w / 2 - wx * z, y: h / 2 - wy * z }, 200);
+    },
+    [animateTo],
+  );
+
   useEffect(() => {
-    if (apiRef) apiRef.current = { fitAll, centerLatest, jumpTo };
-  }, [apiRef, fitAll, centerLatest, jumpTo]);
+    if (apiRef) apiRef.current = { fitAll, centerLatest, jumpTo, zoomBy };
+  }, [apiRef, fitAll, centerLatest, jumpTo, zoomBy]);
 
   /* ---------- sync computed graph into the canvas scene ---------- */
   useEffect(() => {
@@ -902,6 +1100,7 @@ export default function CanvasStage({
         width: look.width,
         dashed: look.dashed,
         animate,
+        phase: (hashId(e.id) % 13) / 13,
         skeleton: look.skeleton,
         label: look.cross ? t(lang, 'contextLabel') : '',
       });
@@ -972,12 +1171,31 @@ export default function CanvasStage({
     if (!n) return;
     const { h } = sizeRef.current;
     const z = clamp(Math.min(vpRef.current.zoom, (h - 48) / Math.max(1, n.h)), 0.55, 1);
-    centerOn(n, z);
+    centerOn(n, z, 300);
   }, [expandedId, centerOn]);
 
   useEffect(() => {
     setDetailNode(expandedId ? nodes.find((n) => n.id === expandedId) || null : null);
   }, [expandedId, nodes]);
+
+  useEffect(() => {
+    lastMeasureRef.current = 0;
+  }, [expandedId]);
+
+  useEffect(() => {
+    const el = detailRef.current;
+    if (!el) return undefined;
+    const report = () => {
+      const h = el.scrollHeight;
+      if (h <= 40 || Math.abs(h - lastMeasureRef.current) < 2) return;
+      lastMeasureRef.current = h;
+      propsRef.current.onExpandedHeight?.(Math.min(1200, Math.max(180, h)));
+    };
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [detailNode, lang]);
 
   useEffect(() => {
     if (framedTurn == null) {
@@ -1028,6 +1246,8 @@ export default function CanvasStage({
     if (!el) return undefined;
     const onWheel = (e) => {
       e.preventDefault();
+      cancelCamAnim();
+      setInteracting(false);
       const rect = el.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;
@@ -1044,11 +1264,11 @@ export default function CanvasStage({
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [afterViewport]);
+  }, [afterViewport, cancelCamAnim, setInteracting]);
 
   useEffect(() => {
     return () => {
-      for (const r of [engineRaf, paintRaf, animRaf]) {
+      for (const r of [engineRaf, paintRaf, animRaf, camRaf]) {
         if (r.current) cancelAnimationFrame(r.current);
       }
     };
@@ -1149,6 +1369,9 @@ export default function CanvasStage({
   };
 
   const onPointerDown = (e) => {
+    cancelCamAnim();
+    setInteracting(false);
+    propsRef.current.onPane?.();
     const canvas = canvasRef.current;
     const world = toWorld(e);
 
@@ -1224,7 +1447,10 @@ export default function CanvasStage({
       const hit = hitTest(world.x, world.y);
       const id = hit ? hit.id : null;
       const canvas = canvasRef.current;
-      if (canvas) canvas.style.cursor = hit ? 'grab' : 'default';
+      if (canvas) {
+        canvas.style.cursor = hit ? 'pointer' : 'default';
+        canvas.title = hit && hit.kind === 'send' ? t(langRef.current, 'sendHint') : '';
+      }
       if (id !== hoverRef.current) {
         hoverRef.current = id;
         schedulePaint();
@@ -1354,27 +1580,46 @@ export default function CanvasStage({
     centerLatest();
   };
 
-  const onMiniPointer = (e, down) => {
+  const miniNavigate = (e) => {
     const mini = miniRef.current;
     const base = miniBaseRef.current;
-    if (!mini || !base) return;
-    if (down) mini.setPointerCapture(e.pointerId);
-    else if (!mini.hasPointerCapture(e.pointerId)) return;
+    if (!mini || !base) return null;
     const rect = mini.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const wx = (mx - base.ox) / base.scale;
-    const wy = (my - base.oy) / base.scale;
+    const wx = (e.clientX - rect.left - base.ox) / base.scale;
+    const wy = (e.clientY - rect.top - base.oy) / base.scale;
     const { w, h } = sizeRef.current;
     const vp = vpRef.current;
-    vp.x = w / 2 - wx * vp.zoom;
-    vp.y = h / 2 - wy * vp.zoom;
-    afterViewport();
-    if (!down && mini.hasPointerCapture(e.pointerId)) mini.releasePointerCapture(e.pointerId);
+    return { zoom: vp.zoom, x: w / 2 - wx * vp.zoom, y: h / 2 - wy * vp.zoom };
+  };
+
+  const onMiniPointer = (e, down) => {
+    const mini = miniRef.current;
+    if (!mini || !miniBaseRef.current) return;
+    if (e.type === 'pointerdown') {
+      miniDragRef.current = { x: e.clientX, y: e.clientY, moved: false };
+      mini.setPointerCapture(e.pointerId);
+      return;
+    }
+    const st = miniDragRef.current;
+    if (!st) return;
+    if (e.type === 'pointermove') {
+      if (Math.abs(e.clientX - st.x) + Math.abs(e.clientY - st.y) > 4) st.moved = true;
+      if (st.moved) {
+        const target = miniNavigate(e);
+        if (target) animateTo(target, 0);
+      }
+      return;
+    }
+    const target = miniNavigate(e);
+    if (target) animateTo(target, st.moved ? 0 : 300);
+    miniDragRef.current = null;
+    if (mini.hasPointerCapture(e.pointerId)) mini.releasePointerCapture(e.pointerId);
   };
 
   const onMiniWheel = (e) => {
     e.preventDefault();
+    cancelCamAnim();
+    setInteracting(false);
     const mini = miniRef.current;
     const base = miniBaseRef.current;
     if (!mini || !base) return;
@@ -1404,6 +1649,7 @@ export default function CanvasStage({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onPointerLeave={() => {
+          if (canvasRef.current) canvasRef.current.title = '';
           if (hoverRef.current) {
             hoverRef.current = null;
             schedulePaint();
@@ -1413,6 +1659,25 @@ export default function CanvasStage({
         onContextMenu={(e) => e.preventDefault()}
       />
       <canvas ref={animRef} className="stage-canvas stage-anim" />
+      <div className="canvas-controls">
+        <button onClick={() => zoomBy(1.25)} title="Zoom in" aria-label="Zoom in">
+          +
+        </button>
+        <button onClick={() => zoomBy(0.8)} title="Zoom out" aria-label="Zoom out">
+          ?
+        </button>
+        <button onClick={() => fitAll()} title={t(lang, 'fitAll')} aria-label={t(lang, 'fitAll')}>
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path
+              d="M6 2H2v4M10 2h4v4M6 14H2v-4M10 14h4v-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      </div>
       {detailNode ? (
         <div
           ref={detailRef}
@@ -1421,6 +1686,9 @@ export default function CanvasStage({
           onWheel={(e) => e.stopPropagation()}
         >
           <div className="tthead">
+            <span className="tticon" style={{ color: KIND_COLOR[detailKind] || '#9a9a9a' }}>
+              <KindIcon kind={detailKind} />
+            </span>
             <span className="ttkind">{t(lang, `kind.${detailKind}`)}</span>
             <span className="tttitle">{titleOf(detailNode.data)}</span>
           </div>

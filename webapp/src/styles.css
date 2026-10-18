@@ -143,7 +143,7 @@ body {
   z-index: 8;
   overflow: auto;
   padding: 7px 9px;
-  background: var(--node-bg);
+  background: color-mix(in srgb, var(--c) 7%, var(--node-bg));
   border-left: 4px solid var(--c);
   color: var(--text);
   pointer-events: auto;
@@ -156,6 +156,23 @@ body {
 }
 .canvas-detail::-webkit-scrollbar { width: 8px; height: 8px; }
 .canvas-detail::-webkit-scrollbar-thumb { background: var(--border-strong); }
+.canvas-controls {
+  position: absolute; left: 14px; bottom: 14px;
+  z-index: 12;
+  display: flex; flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+.canvas-controls button {
+  width: 26px; height: 26px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-bottom: 1px solid var(--border);
+  background: var(--panel); color: var(--muted);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.canvas-controls button:last-child { border-bottom: 0; }
+.canvas-controls button:hover { background: var(--panel2); color: var(--text); }
+.canvas-controls svg { display: block; }
 .tt-minimap-canvas {
   position: absolute; right: 0; bottom: 0;
   width: 390px; height: 255px;
