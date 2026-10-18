@@ -355,20 +355,15 @@ body {
   background: var(--highlight); box-shadow: 0 0 5px var(--highlight);
 }
 
-/* ---------- 连线：实线 + 间隔流动的光点 ---------- */
-.edge-particles {
+/* ---------- 连线：虚线流动 ---------- */
+.react-flow__edge-path.edge-flow {
   fill: none;
-  stroke-width: 3.2;
   stroke-linecap: round;
-  stroke-dasharray: 0.1 13;
-  animation: tt-dot-flow 1.25s linear infinite;
-  pointer-events: none;
+  stroke-dasharray: 9 11;
+  animation: tt-dash-flow 0.95s linear infinite;
 }
-@keyframes tt-dot-flow {
-  to { stroke-dashoffset: -13.1; }
-}
-.react-flow__edge.edge-context .edge-particles {
-  filter: drop-shadow(0 0 4px var(--highlight));
+@keyframes tt-dash-flow {
+  to { stroke-dashoffset: -20; }
 }
 .edge-label {
   position: absolute;
@@ -379,4 +374,13 @@ body {
   border-radius: 4px;
   pointer-events: none;
   white-space: nowrap;
+}
+
+/* 图标 */
+.tticon svg { width: 11px; height: 11px; display: block; }
+.iconbtn { display: inline-flex; align-items: center; justify-content: center; }
+.ticon {
+  width: 12px; height: 12px;
+  fill: none; stroke: currentColor; stroke-width: 1.2;
+  stroke-linecap: round; stroke-linejoin: round;
 }

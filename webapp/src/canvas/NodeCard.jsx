@@ -1,16 +1,8 @@
 import React, { useContext, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
+import KindIcon from './KindIcon.jsx';
 import { LodCtx, LangCtx, ExpandCtx } from './context.js';
 import { t } from '../i18n.js';
-
-const META = {
-  send: { icon: '➤' },
-  context: { icon: '≡' },
-  model: { icon: '◇' },
-  reason: { icon: '✦' },
-  tool: { icon: '⚙' },
-  answer: { icon: '✓' },
-};
 
 function modelLabel(m, provider) {
   if (!m?.id) return '';
@@ -231,7 +223,6 @@ export default function NodeCard({ id, data, selected }) {
   const expandedId = useContext(ExpandCtx);
   const [raw, setRaw] = useState(false);
 
-  const meta = META[data.kind] || { icon: '•' };
   const expanded = expandedId === id;
 
   return (
@@ -242,7 +233,9 @@ export default function NodeCard({ id, data, selected }) {
       <Handle type="target" position={Position.Left} className="tt-handle" />
       <Handle type="source" position={Position.Right} className="tt-handle" />
       <div className="tthead">
-        <span className="tticon">{meta.icon}</span>
+        <span className="tticon">
+          <KindIcon kind={data.kind} />
+        </span>
         <span className="ttkind">{t(lang, `kind.${data.kind}`)}</span>
         <span className="tttitle">{titleOf(data)}</span>
       </div>

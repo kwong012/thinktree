@@ -1,7 +1,7 @@
 import React from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath } from '@xyflow/react';
 
-/** 连线：实线 + 间隔流动的光点。 */
+/** 连线：虚线沿路径流动。 */
 export default function FlowEdge(props) {
   const {
     id,
@@ -26,16 +26,16 @@ export default function FlowEdge(props) {
     targetPosition,
   });
 
-  // 每条边的点相位错开，避免全图同步闪烁
-  const delay = -((hash(id) % 13) / 13) * 1.3;
+  // 每条边的相位错开，避免全图同步闪烁
+  const delay = -((hash(id) % 13) / 13) * 0.95;
 
   return (
     <>
-      <BaseEdge id={id} path={path} style={style} className={className} />
-      <path
-        d={path}
-        className="edge-particles"
-        style={{ stroke: style?.stroke, animationDelay: `${delay}s` }}
+      <BaseEdge
+        id={id}
+        path={path}
+        className={`edge-flow${className ? ' ' + className : ''}`}
+        style={{ ...(style || {}), animationDelay: `${delay}s` }}
       />
       {label ? (
         <EdgeLabelRenderer>

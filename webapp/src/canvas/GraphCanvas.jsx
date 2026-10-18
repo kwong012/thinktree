@@ -148,7 +148,7 @@ function Inner({ session, theme }) {
                 : cross
                   ? 'var(--edge-cross)'
                   : 'var(--edge)',
-            strokeWidth: contextEdge ? 2.6 : active ? 2 : cross ? 1.8 : 1.4,
+            strokeWidth: contextEdge ? 3.2 : active ? 2.6 : cross ? 2.2 : 1.8,
             strokeDasharray: cross && !contextEdge ? '5 4' : undefined,
           },
         };

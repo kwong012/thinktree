@@ -111,7 +111,16 @@ export default function App() {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             title={theme === 'dark' ? t(lang, 'themeLight') : t(lang, 'themeDark')}
           >
-            {theme === 'dark' ? '☀' : '☾'}
+            {theme === 'dark' ? (
+              <svg className="ticon" viewBox="0 0 12 12">
+                <circle cx="6" cy="6" r="2.1" />
+                <path d="M6 1.4v1.4M6 9.2v1.4M1.4 6h1.4M9.2 6h1.4M2.9 2.9l1 1M8.1 8.1l1 1M9.1 2.9l-1 1M3.9 8.1l-1 1" />
+              </svg>
+            ) : (
+              <svg className="ticon" viewBox="0 0 12 12">
+                <path d="M9.7 7.6A4.2 4.2 0 1 1 5.4 1.8a3.3 3.3 0 0 0 4.3 5.8Z" />
+              </svg>
+            )}
           </button>
         </header>
 
