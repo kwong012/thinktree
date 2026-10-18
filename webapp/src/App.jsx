@@ -14,7 +14,7 @@ export default function App() {
   const [sessions, setSessions] = useState({});
   const [activeSource, setActiveSource] = useState(null);
   const [activeId, setActiveId] = useState(null);
-  const [manual, setManual] = useState(false);
+  const [picked, setPicked] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState('connecting');
 
@@ -80,17 +80,20 @@ export default function App() {
     }
     if (activeAgent.sourceId !== activeSource) {
       setActiveSource(activeAgent.sourceId);
-      setManual(false);
     }
     const ids = (activeAgent.sessions || []).map((s) => s.id);
     if (!ids.length) {
       setActiveId(null);
       return;
     }
-    // 默认跟随最新活动会话；用户手动点选后保持。
-    if (manual && ids.includes(activeId)) return;
+    // 每个 tab 记住自己选中的 session，始终按 id 精确匹配。
+    const want = picked[activeAgent.sourceId];
+    if (want && ids.includes(want)) {
+      if (activeId !== want) setActiveId(want);
+      return;
+    }
     if (activeId !== ids[0]) setActiveId(ids[0]);
-  }, [activeAgent, activeSource, activeId, manual]);
+  }, [activeAgent, activeSource, activeId, picked]);
 
   const key = activeAgent && activeId ? `${activeAgent.sourceId}:${activeId}` : null;
   const session = key ? sessions[key] : null;
@@ -128,7 +131,11 @@ export default function App() {
         setSessions((prev) => ({ ...prev, [`${sess.sourceId}:${sess.id}`]: sess }));
         setActiveSource(agent.sourceId);
         setActiveId(latest.id);
-        setManual(false);
+        setPicked((prev) => {
+          const next = { ...prev };
+          delete next[agent.sourceId];
+          return next;
+        });
       }
     } catch {
       // ignore
@@ -186,8 +193,10 @@ export default function App() {
               key={a.sourceId}
               className={`tab${a.sourceId === activeAgent?.sourceId ? ' on' : ''}`}
               onClick={() => {
+                const target =
+                  a.sessions?.find((s) => s.id === picked[a.sourceId]) || a.sessions?.[0];
                 setActiveSource(a.sourceId);
-                setActiveId(a.sessions?.[0]?.id || null);
+                setActiveId(target?.id || null);
               }}
               title={a.description}
             >
@@ -208,7 +217,7 @@ export default function App() {
                 key={s.id}
                 className={`pill${s.id === activeId ? ' on' : ''}`}
                 onClick={() => {
-                  setManual(true);
+                  setPicked((prev) => ({ ...prev, [activeAgent.sourceId]: s.id }));
                   setActiveId(s.id);
                 }}
                 title={s.title}
@@ -216,11 +225,15 @@ export default function App() {
                 {s.title || s.id}
               </button>
             ))}
-            {manual ? (
+            {picked[activeAgent.sourceId] ? (
               <button
                 className="pill follow"
                 onClick={() => {
-                  setManual(false);
+                  setPicked((prev) => {
+                    const next = { ...prev };
+                    delete next[activeAgent.sourceId];
+                    return next;
+                  });
                   setActiveId(activeAgent.sessions?.[0]?.id || null);
                 }}
                 title={t(lang, 'follow')}
