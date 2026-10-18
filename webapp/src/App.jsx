@@ -160,31 +160,34 @@ export default function App() {
           <div className="spacer" />
           {focused ? (
             <span className="focused">
-              {t(lang, 'foreground')}: {focused.name}
+              <span className="flabel">{t(lang, 'foreground')}</span>
+              <span className="fname">{focused.name}</span>
             </span>
           ) : null}
-          <button
-            className="iconbtn"
-            onClick={refresh}
-            disabled={refreshing}
-            title={t(lang, 'refresh')}
-          >
-            <svg
-              className="ticon"
-              viewBox="0 0 12 12"
-              style={{ animation: refreshing ? 'tt-spin 0.9s linear infinite' : undefined }}
+          <div className="hdr-actions">
+            <button
+              className="iconbtn"
+              onClick={refresh}
+              disabled={refreshing}
+              title={t(lang, 'refresh')}
             >
-              <path d="M9.7 4.4A4 4 0 1 0 10 7.2" />
-              <path d="M9.9 1.8v2.9H7" />
-            </svg>
-          </button>
-          <button
-            className="iconbtn"
-            onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
-            title="中文 / English"
-          >
-            {lang === 'zh' ? 'EN' : '中'}
-          </button>
+              <svg
+                className="ticon"
+                viewBox="0 0 12 12"
+                style={{ animation: refreshing ? 'tt-spin 0.9s linear infinite' : undefined }}
+              >
+                <path d="M9.7 4.4A4 4 0 1 0 10 7.2" />
+                <path d="M9.9 1.8v2.9H7" />
+              </svg>
+            </button>
+            <button
+              className="iconbtn"
+              onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+              title="中文 / English"
+            >
+              {lang === 'zh' ? 'EN' : '中'}
+            </button>
+          </div>
         </header>
 
         <nav className="tabs">
@@ -211,7 +214,6 @@ export default function App() {
 
         {activeAgent ? (
           <div className="sessionbar">
-            <span className="agentname">{activeAgent.name}</span>
             {(activeAgent.sessions || []).map((s) => (
               <button
                 key={s.id}

@@ -422,23 +422,30 @@ function Inner({ session }) {
       }}
     >
       <div className="canvas-toolbar">
-        <span className="lod-pill" data-lod={lod}>
-          {t(lang, LOD_KEY[lod] || 'lodMid')}
-        </span>
-        <span className="muted">
-          {computed.nodes.length} {t(lang, 'nodes')} · {computed.edges.length} {t(lang, 'edges')}
-        </span>
-        <span className="hl-legend">
-          <i /> {t(lang, 'ctxLegend')}
-        </span>
+        <div className="tb-group">
+          <span className="lod-pill" data-lod={lod}>
+            {t(lang, LOD_KEY[lod] || 'lodMid')}
+          </span>
+          <span className="tb-sep" />
+          <span className="tb-count">
+            {computed.nodes.length} {t(lang, 'nodes')} · {computed.edges.length}{' '}
+            {t(lang, 'edges')}
+          </span>
+          <span className="tb-sep" />
+          <span className="hl-legend">
+            <i /> {t(lang, 'ctxLegend')}
+          </span>
+        </div>
         <div className="spacer" />
-        <button onClick={() => setShowMini((v) => !v)}>
-          {showMini ? t(lang, 'hideMap') : t(lang, 'map')}
-        </button>
-        <button onClick={() => rf.fitView({ padding: 0.12, duration: 450 })}>
-          {t(lang, 'fitAll')}
-        </button>
-        <button onClick={() => centerLast(1, 450)}>{t(lang, 'latest')}</button>
+        <div className="tb-actions">
+          <button className={showMini ? 'on' : ''} onClick={() => setShowMini((v) => !v)}>
+            {showMini ? t(lang, 'hideMap') : t(lang, 'map')}
+          </button>
+          <button onClick={() => rf.fitView({ padding: 0.12, duration: 450 })}>
+            {t(lang, 'fitAll')}
+          </button>
+          <button onClick={() => centerLast(1, 450)}>{t(lang, 'latest')}</button>
+        </div>
       </div>
 
       <ExpandCtx.Provider value={expandedId}>
