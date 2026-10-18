@@ -1,0 +1,17 @@
+{
+  "name": "thinktree",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Universal agent working-trace panel: see how an agent turns a prompt into an answer.",
+  "scripts": {
+    "start": "node src/server/index.js",
+    "dump": "node scripts/dump-trace.mjs",
+    "web:install": "npm --prefix webapp install",
+    "dev:web": "npm --prefix webapp run dev",
+    "build:web": "npm --prefix webapp run build"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

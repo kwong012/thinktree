@@ -1,0 +1,9 @@
+workfile-temp/
+node_modules/
+*.log
+.DS_Store
+.playwright-mcp/
+
+# 前端构建产物（由 webapp/ 构建生成，不纳入版本控制）
+src/web/dist/
+data/
