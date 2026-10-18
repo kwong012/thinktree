@@ -59,6 +59,7 @@ const DICT = {
     designTree: '轨迹',
     hideTree: '收起轨迹',
     showTree: '展开轨迹',
+    sendHint: '单击展开 · 右键包络整轮',
     kind: {
       send: '发送',
       context: '上下文',
@@ -126,6 +127,7 @@ const DICT = {
     designTree: 'Trace',
     hideTree: 'Collapse trace',
     showTree: 'Expand trace',
+    sendHint: 'Click to expand · right-click to frame turn',
     kind: {
       send: 'Prompt',
       context: 'Context',

@@ -33,6 +33,77 @@ const MINI_COLOR = {
   answer: '#5ffa68',
 };
 
+const EDGE_COLOR = {
+  focus: '#ff6e67',
+  context: '#00c5c7',
+  active: '#00c5c7',
+  cross: '#c7c400',
+  thread: '#c7c7c7',
+  base: '#9a9a9a',
+};
+
+function classifyEdge(e, nodeById, turnById, lastTurn, latestHasCache, expandedId) {
+  const sourceNode = nodeById.get(e.source);
+  const targetNode = nodeById.get(e.target);
+  const cross = !!e.data?.cross;
+  const thread = !!e.data?.thread;
+  const active = (turnById.get(e.source) ?? -1) === lastTurn;
+  const inLatest =
+    (sourceNode?.data.turnIndex ?? -1) === lastTurn ||
+    (targetNode?.data.turnIndex ?? -1) === lastTurn;
+
+  const contextEdge =
+    (inLatest &&
+      (sourceNode?.data.kind === 'context' ||
+        targetNode?.data.kind === 'context' ||
+        sourceNode?.data.kind === 'tool' ||
+        targetNode?.data.kind === 'tool')) ||
+    (cross && (targetNode?.data.turnIndex ?? -1) === lastTurn) ||
+    (inLatest &&
+      latestHasCache &&
+      sourceNode?.data.kind === 'send' &&
+      targetNode?.data.kind === 'model');
+
+  const focusEdge = !!(expandedId && (e.source === expandedId || e.target === expandedId));
+  const color = focusEdge
+    ? EDGE_COLOR.focus
+    : contextEdge
+      ? EDGE_COLOR.context
+      : active
+        ? EDGE_COLOR.active
+        : cross
+          ? EDGE_COLOR.cross
+          : thread
+            ? EDGE_COLOR.thread
+            : EDGE_COLOR.base;
+  const width = focusEdge
+    ? 2.6
+    : contextEdge
+      ? 2.2
+      : active
+        ? 2.1
+        : cross
+          ? 1.9
+          : thread
+            ? 1.9
+            : 1.8;
+  const dashed = cross && !contextEdge && !focusEdge;
+
+  return {
+    sourceNode,
+    targetNode,
+    cross,
+    thread,
+    active,
+    contextEdge,
+    focusEdge,
+    color,
+    width,
+    dashed,
+    skeleton: cross || thread || active,
+  };
+}
+
 function estimateExpandedHeight(data) {
   const d = data.ev?.data || {};
   const res = data.result?.data;
@@ -56,6 +127,141 @@ export default function GraphCanvas({ session, onRefresh, refreshing }) {
   );
 }
 
+function FarCanvas({ nodes, edges, expandedId }) {
+  const rf = useReactFlow();
+  const ref = useRef(null);
+
+  const scene = useMemo(() => {
+    const nodeById = new Map(nodes.map((n) => [n.id, n]));
+    const turnById = new Map(nodes.map((n) => [n.id, n.data?.turnIndex ?? 0]));
+    let lastTurn = 0;
+    for (const n of nodes) lastTurn = Math.max(lastTurn, n.data?.turnIndex ?? 0);
+    let latestHasCache = false;
+    for (const n of nodes) {
+      if (
+        (n.data?.turnIndex ?? 0) === lastTurn &&
+        n.data?.kind === 'model' &&
+        (n.data?.ev?.data?.response?.usage?.cacheRead || 0) > 0
+      ) {
+        latestHasCache = true;
+        break;
+      }
+    }
+
+    const nodeGroups = new Map();
+    for (const n of nodes) {
+      const kind = n.data?.kind || 'context';
+      let list = nodeGroups.get(kind);
+      if (!list) nodeGroups.set(kind, (list = []));
+      const size = NODE_SIZE[kind] || [220, 90];
+      list.push({
+        x: n.position.x,
+        y: n.position.y,
+        w: n.width || size[0],
+        h: n.height || size[1],
+      });
+    }
+
+    const edgeGroups = new Map();
+    for (const e of edges) {
+      const look = classifyEdge(e, nodeById, turnById, lastTurn, latestHasCache, expandedId);
+      const s = look.sourceNode;
+      const t = look.targetNode;
+      if (!s || !t) continue;
+      const sx = s.position.x + (s.width || 220) / 2;
+      const sy = s.position.y + (s.height || 90) / 2;
+      const tx = t.position.x + (t.width || 220) / 2;
+      const ty = t.position.y + (t.height || 90) / 2;
+      const key = `${look.color}|${look.dashed ? 1 : 0}|${look.skeleton ? 1 : 0}`;
+      let group = edgeGroups.get(key);
+      if (!group) {
+        edgeGroups.set(
+          key,
+          (group = { color: look.color, dashed: look.dashed, skeleton: look.skeleton, segs: [] }),
+        );
+      }
+      group.segs.push(sx, sy, tx, ty);
+    }
+
+    return { nodeGroups, edgeGroups };
+  }, [nodes, edges, expandedId]);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return undefined;
+    const ctx = canvas.getContext('2d');
+    let raf = 0;
+    let last = '';
+    let cw = 0;
+    let ch = 0;
+
+    const draw = (vp) => {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const W = Math.max(1, Math.round(rect.width));
+      const H = Math.max(1, Math.round(rect.height));
+      if (W !== cw || H !== ch) {
+        cw = W;
+        ch = H;
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      const z = vp.zoom;
+
+      ctx.lineCap = 'round';
+      for (const group of scene.edgeGroups.values()) {
+        ctx.globalAlpha = group.skeleton ? 1 : 0.7;
+        ctx.strokeStyle = group.color;
+        ctx.lineWidth = group.skeleton ? 1.5 : 1.2;
+        ctx.setLineDash(group.dashed ? [4, 4] : []);
+        ctx.beginPath();
+        for (let i = 0; i < group.segs.length; i += 4) {
+          const x1 = group.segs[i] * z + vp.x;
+          const y1 = group.segs[i + 1] * z + vp.y;
+          const x2 = group.segs[i + 2] * z + vp.x;
+          const y2 = group.segs[i + 3] * z + vp.y;
+          if ((x1 < 0 && x2 < 0) || (y1 < 0 && y2 < 0) || (x1 > W && x2 > W) || (y1 > H && y2 > H)) {
+            continue;
+          }
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+        }
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.setLineDash([]);
+
+      for (const [kind, list] of scene.nodeGroups) {
+        ctx.fillStyle = MINI_COLOR[kind] || '#9a9a9a';
+        for (const r of list) {
+          const x = r.x * z + vp.x;
+          const y = r.y * z + vp.y;
+          const w = Math.max(1, r.w * z);
+          const h = Math.max(1, r.h * z);
+          if (x + w < 0 || y + h < 0 || x > W || y > H) continue;
+          ctx.fillRect(x, y, w, h);
+        }
+      }
+    };
+
+    const tick = () => {
+      const vp = rf.getViewport();
+      const key = `${vp.x.toFixed(1)}|${vp.y.toFixed(1)}|${vp.zoom.toFixed(4)}`;
+      if (key !== last) {
+        last = key;
+        draw(vp);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [rf, scene]);
+
+  return <canvas ref={ref} className="far-canvas" />;
+}
 function Inner({ session, onRefresh, refreshing }) {
   const rf = useReactFlow();
   const lang = useContext(LangCtx);
@@ -278,54 +484,28 @@ function Inner({ session, onRefresh, refreshing }) {
 
     setEdges(
       computed.edges.map((e) => {
-        const sourceNode = nodeById.get(e.source);
-        const targetNode = nodeById.get(e.target);
-        const cross = !!e.data?.cross;
-        const active = (turnById.get(e.source) ?? -1) === lastTurn;
-        const inLatest =
-          (sourceNode?.data.turnIndex ?? -1) === lastTurn ||
-          (targetNode?.data.turnIndex ?? -1) === lastTurn;
-
-        // 最新一轮的「上下文检索」连线：上下文节点 / 工具检索 / 跨轮继承 / 缓存命中
-        const contextEdge =
-          (inLatest &&
-            (sourceNode?.data.kind === 'context' ||
-              targetNode?.data.kind === 'context' ||
-              sourceNode?.data.kind === 'tool' ||
-              targetNode?.data.kind === 'tool')) ||
-          (cross && (targetNode?.data.turnIndex ?? -1) === lastTurn) ||
-          (inLatest &&
-            latestHasCache &&
-            sourceNode?.data.kind === 'send' &&
-            targetNode?.data.kind === 'model');
-
-        const focusEdge = !!(expandedId && (e.source === expandedId || e.target === expandedId));
-        const skeleton = cross || !!e.data?.thread || active;
+        const look = classifyEdge(e, nodeById, turnById, lastTurn, latestHasCache, expandedId);
 
         return {
           ...e,
           type: 'tt',
           animated: false,
-          hidden: lod === 'far' && !skeleton,
-          data: { ...(e.data || {}), animate: active || focusEdge },
-          className: focusEdge ? 'edge-focus' : contextEdge ? 'edge-context' : undefined,
-          label: cross ? t(lang, 'contextLabel') : undefined,
+          hidden: lod === 'far',
+          data: { ...(e.data || {}), animate: look.active || look.focusEdge },
+          className: look.focusEdge
+            ? 'edge-focus'
+            : look.contextEdge
+              ? 'edge-context'
+              : undefined,
+          label: look.cross ? t(lang, 'contextLabel') : undefined,
           labelStyle: { fill: 'var(--muted)', fontSize: 9 },
           labelBgStyle: { fill: 'var(--bg)', fillOpacity: 0.85 },
           labelBgPadding: [3, 2],
           labelBgBorderRadius: 4,
           style: {
-            stroke: focusEdge
-              ? 'var(--focus)'
-              : contextEdge
-                ? 'var(--highlight)'
-                : active
-                  ? 'var(--accent)'
-                  : cross
-                    ? 'var(--edge-cross)'
-                    : 'var(--edge)',
-            strokeWidth: focusEdge ? 1.8 : contextEdge ? 1.6 : active ? 1.4 : cross ? 1.2 : 1.0,
-            strokeDasharray: cross && !contextEdge && !focusEdge ? '5 4' : undefined,
+            stroke: look.color,
+            strokeWidth: look.width,
+            strokeDasharray: look.dashed ? '5 4' : undefined,
           },
         };
       }),
@@ -409,16 +589,12 @@ function Inner({ session, onRefresh, refreshing }) {
     if (event.shiftKey || event.metaKey || event.ctrlKey) return;
     if (node.type !== 'tt') return;
 
-    // 点击「提问」：显示/收起整轮包络框
-    if (node.data.kind === 'send') {
-      const ti = node.data.turnIndex;
-      setFramedTurn((prev) => (prev === ti ? null : ti));
-      setExpandedId(null);
-      return;
-    }
-
     // 包络框内点击其他框：保持整轮选中，便于整体拖动
-    if (framedTurn != null && (node.data.turnIndex ?? -1) === framedTurn) {
+    if (
+      node.data.kind !== 'send' &&
+      framedTurn != null &&
+      (node.data.turnIndex ?? -1) === framedTurn
+    ) {
       setNodes((ns) =>
         ns.map((n) =>
           n.type === 'tt'
@@ -430,6 +606,13 @@ function Inner({ session, onRefresh, refreshing }) {
     }
 
     setExpandedId((prev) => (prev === node.id ? null : node.id));
+  };
+
+  const onNodeContextMenu = (event, node) => {
+    if (node.type !== 'tt' || node.data.kind !== 'send') return;
+    event.preventDefault();
+    const ti = node.data.turnIndex;
+    setFramedTurn((prev) => (prev === ti ? null : ti));
   };
 
   return (
@@ -501,6 +684,7 @@ function Inner({ session, onRefresh, refreshing }) {
               setLod((prev) => (prev === l ? prev : l));
             }}
             onNodeClick={onNodeClick}
+            onNodeContextMenu={onNodeContextMenu}
             onNodeDragStart={() => {
               dragGuard.current = Date.now();
             }}
@@ -523,8 +707,8 @@ function Inner({ session, onRefresh, refreshing }) {
             nodesConnectable={false}
             elementsSelectable
             selectionOnDrag
-            panOnDrag={[1, 2]}
-            onlyRenderVisibleElements
+            panOnDrag={[1]}
+            onlyRenderVisibleElements={lod !== 'far'}
             colorMode="dark"
           >
             <Controls showInteractive={false} />
@@ -542,6 +726,9 @@ function Inner({ session, onRefresh, refreshing }) {
               />
             ) : null}
           </ReactFlow>
+          {lod === 'far' ? (
+            <FarCanvas nodes={computed.nodes} edges={computed.edges} expandedId={expandedId} />
+          ) : null}
         </LodCtx.Provider>
       </ExpandCtx.Provider>
       </div>

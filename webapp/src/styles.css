@@ -13,9 +13,9 @@
 
   --node-bg: #0d0d0d;
   --node-hover: #181818;
-  --edge: #555555;
+  --edge: #9a9a9a;
   --edge-cross: #c7c400;
-  --edge-far: #757575;
+  --edge-far: #8a8a8a;
   --chip-bg: #232323;
   --chip-text: #c7c7c7;
   --pre-bg: #000000;
@@ -23,7 +23,7 @@
   --minimap-mask: rgba(0, 0, 0, 0.8);
   --focus: #ff6e67;
   --frame: #8a8a8a;
-  --thread: #8a8a8a;
+  --thread: #c7c7c7;
   --highlight: #00c5c7;
 }
 
@@ -129,6 +129,12 @@ body {
 .main { flex: 1; position: relative; min-height: 0; }
 .canvas-wrap { position: absolute; inset: 0; display: flex; background: var(--bg); }
 .canvas-stage { position: relative; flex: 1; min-width: 0; }
+.canvas-wrap.lod-far .react-flow__node-tt { display: none !important; }
+.far-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 4; pointer-events: none;
+}
 
 /* ---------- design tree ---------- */
 .tree {
@@ -228,14 +234,14 @@ body {
 .canvas-toolbar button.on { color: var(--accent); }
 .tb-legend {
   position: absolute; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 10px;
-  height: 26px; padding: 0 10px;
+  display: flex; align-items: center; gap: 16px;
+  height: 30px; padding: 0 14px;
   background: var(--panel); border: 1px solid var(--border);
-  font-size: 9px; color: var(--faint); white-space: nowrap;
+  font-size: 14px; color: var(--muted); white-space: nowrap;
 }
-.tb-lg { display: inline-flex; align-items: center; gap: 4px; }
-.tb-lg i { width: 6px; height: 6px; background: var(--c); }
-@media (max-width: 1100px) { .tb-legend { display: none; } }
+.tb-lg { display: inline-flex; align-items: center; gap: 7px; }
+.tb-lg i { width: 10px; height: 10px; background: var(--c); }
+@media (max-width: 1250px) { .tb-legend { display: none; } }
 .canvas-toolbar button:disabled { opacity: .5; cursor: default; }
 .hl-legend {
   display: inline-flex; align-items: center; gap: 5px;
@@ -369,10 +375,6 @@ body {
   white-space: nowrap;
 }
 
-.lod-far .react-flow__edge:not(.edge-context):not(.edge-focus) .react-flow__edge-path {
-  stroke: var(--edge-far) !important;
-  stroke-width: 1.3 !important;
-}
 
 /* ---------- turn frame ---------- */
 .react-flow__node-turnframe { pointer-events: none; }

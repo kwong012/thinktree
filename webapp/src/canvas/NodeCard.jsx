@@ -242,6 +242,7 @@ function NodeCard({ id, data, selected }) {
     <div
       className={`ttnode kind-${data.kind}${selected ? ' sel' : ''}${expanded ? ' expanded' : ''}`}
       data-lod={lod}
+      title={data.kind === 'send' ? t(lang, 'sendHint') : undefined}
     >
       <Handle type="target" position={Position.Left} className="tt-handle" />
       <Handle type="source" position={Position.Right} className="tt-handle" />
