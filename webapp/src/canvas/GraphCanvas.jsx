@@ -24,7 +24,6 @@ const edgeTypes = { tt: FlowEdge };
 const LOD_KEY = { far: 'lodFar', mid: 'lodMid', near: 'lodNear' };
 
 const EXPANDED_W = 520;
-const PHYSICS_MODE = 'return';
 
 const MINI_COLOR = {
   send: '#6871ff',
@@ -268,6 +267,14 @@ function Inner({ session, onRefresh, refreshing }) {
   const rf = useReactFlow();
   const lang = useContext(LangCtx);
   const [lod, setLod] = useState('near');
+  // 碰撞动效：stay = 停在推开位置；return = 弹回原位。
+  const [physMode, setPhysMode] = useState(() =>
+    localStorage.getItem('tt-physics') === 'stay' ? 'stay' : 'return',
+  );
+  const choosePhysMode = (m) => {
+    setPhysMode(m);
+    localStorage.setItem('tt-physics', m);
+  };
   const [expandedId, setExpandedId] = useState(null);
   const [measuredH, setMeasuredH] = useState(0);
   const [showMini, setShowMini] = useState(true);
@@ -381,7 +388,7 @@ function Inner({ session, onRefresh, refreshing }) {
       if (n) starts.set(id, { x: n.position.x, y: n.position.y });
     }
 
-    const eng = createPhysics({ mode: PHYSICS_MODE, gap: MIN_GAP });
+    const eng = createPhysics({ mode: physMode, gap: MIN_GAP });
     eng.sync(items);
     eng.setKinematic(ids);
     physRef.current = eng;
@@ -802,6 +809,18 @@ function Inner({ session, onRefresh, refreshing }) {
         <div className="tb-actions" ref={actionsRef}>
           <button onClick={onRefresh} disabled={refreshing}>
             {t(lang, 'refresh')}
+          </button>
+          <button
+            className={`phys-switch${physMode === 'return' ? ' on' : ''}`}
+            onClick={() => choosePhysMode(physMode === 'stay' ? 'return' : 'stay')}
+            title={`${t(lang, 'physMode')}：${
+              physMode === 'stay' ? t(lang, 'physStayHint') : t(lang, 'physReturnHint')
+            }`}
+          >
+            <span className="phys-track">
+              <i />
+            </span>
+            {physMode === 'stay' ? t(lang, 'physStay') : t(lang, 'physReturn')}
           </button>
           <button className={showMini ? 'on' : ''} onClick={() => setShowMini((v) => !v)}>
             {showMini ? t(lang, 'hideMap') : t(lang, 'map')}

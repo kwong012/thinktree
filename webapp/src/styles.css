@@ -218,6 +218,27 @@ body {
   border: 1px solid var(--border);
 }
 .tb-group { gap: 8px; padding: 0 10px; }
+.phys-switch {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 0 10px;
+  background: transparent; border: 0;
+  color: var(--muted); font: inherit; font-size: 10.5px; cursor: pointer;
+}
+.phys-switch:hover { background: var(--panel2); color: var(--text); }
+.phys-track {
+  position: relative; flex: 0 0 auto;
+  width: 24px; height: 12px;
+  background: var(--border); border-radius: 6px;
+  transition: background .16s ease;
+}
+.phys-track i {
+  position: absolute; top: 2px; left: 2px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted);
+  transition: transform .16s ease, background .16s ease;
+}
+.phys-switch.on .phys-track { background: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.phys-switch.on .phys-track i { transform: translateX(12px); background: var(--accent); }
 .tb-sep { width: 1px; height: 12px; background: var(--border); }
 .lod-pill {
   font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
