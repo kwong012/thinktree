@@ -216,7 +216,7 @@ function stream(req, res) {
         }
         registry.proc?.stop?.();
         process.exit(0);
-      }, 5000);
+      }, 2000);
     }
   });
 }
