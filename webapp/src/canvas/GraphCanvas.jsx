@@ -70,6 +70,27 @@ function Inner({ session, theme }) {
   const [dragVersion, setDragVersion] = useState(0);
   const dragTick = useRef(0);
   const dragGuard = useRef(0);
+  const miniDown = useRef(null);
+
+  // 点击小地图空白处 → 视口跳到对应位置（拖动视口矩形时不触发）。
+  const onMiniDown = (e) => {
+    miniDown.current = e.target.closest?.('.react-flow__minimap')
+      ? { x: e.clientX, y: e.clientY }
+      : null;
+  };
+  const onMiniClick = (e) => {
+    const wrap = e.target.closest?.('.react-flow__minimap');
+    if (!wrap) return;
+    const d = miniDown.current;
+    if (d && (Math.abs(e.clientX - d.x) > 5 || Math.abs(e.clientY - d.y) > 5)) return;
+    const svg = wrap.querySelector('svg');
+    if (!svg?.getScreenCTM) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+    rf.setCenter(loc.x, loc.y, { zoom: rf.getViewport().zoom, duration: 300 });
+  };
 
   // 拖动时被压到的框即时让位（无需等松手）。
   const avoidOverlap = (dragged) => {
@@ -394,6 +415,8 @@ function Inner({ session, theme }) {
   return (
     <div
       className={`canvas-wrap lod-${lod}`}
+      onPointerDownCapture={onMiniDown}
+      onClickCapture={onMiniClick}
       onDoubleClick={(e) => {
         if (e.target.closest?.('.drawer')) return;
         centerLast(1, 450);

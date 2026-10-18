@@ -37,18 +37,23 @@ export default function App() {
         setSessions((prev) => {
           const key = `${sess.sourceId}:${sess.id}`;
           const old = prev[key];
-          if (!sess.partial || !old) return { ...prev, [key]: sess };
 
-          const map = new Map((old.turns || []).map((t) => [t.index, t]));
-          for (const t of sess.turns || []) map.set(t.index, t);
-          return {
-            ...prev,
-            [key]: {
-              ...old,
-              updatedAt: sess.updatedAt ?? old.updatedAt,
-              turns: [...map.values()].sort((a, b) => a.index - b.index),
-            },
-          };
+          // 增量只含最后一轮：完整会话尚未加载时忽略，避免存下半截数据。
+          if (sess.partial) {
+            if (!old || !old.turns?.length) return prev;
+            const map = new Map((old.turns || []).map((t) => [t.index, t]));
+            for (const t of sess.turns || []) map.set(t.index, t);
+            return {
+              ...prev,
+              [key]: {
+                ...old,
+                updatedAt: sess.updatedAt ?? old.updatedAt,
+                turns: [...map.values()].sort((a, b) => a.index - b.index),
+              },
+            };
+          }
+
+          return { ...prev, [key]: sess };
         });
       },
       onStatus: setStatus,
@@ -83,7 +88,9 @@ export default function App() {
 
   useEffect(() => {
     if (!activeAgent || !activeId) return;
-    if (sessions[`${activeAgent.sourceId}:${activeId}`]) return;
+    const existing = sessions[`${activeAgent.sourceId}:${activeId}`];
+    // 已加载完整会话则不再请求；只有增量或空数据时补一次全量。
+    if (existing?.turns?.length) return;
     let alive = true;
     fetchSession(activeAgent.sourceId, activeId)
       .then((sess) => {
