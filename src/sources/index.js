@@ -4,11 +4,20 @@
  * 新增一个 agent = 在 sources/ 下加一个文件并在这里登记，不动 UI / server。
  */
 import { createOpencodeSource } from './opencode.js';
+import { createPiSource } from './pi.js';
+import { createCodexSource } from './codex.js';
+import { createKimiSource } from './kimi.js';
+import { createZcodeSource } from './zcode.js';
+import { createClineSource } from './cline.js';
 
 export function createSources() {
   const factories = [
-    () => createOpencodeSource(),
-    // 后续：pi / cline / kimi / zcode / codex
+    createOpencodeSource,
+    createPiSource,
+    createCodexSource,
+    createKimiSource,
+    createZcodeSource,
+    createClineSource,
   ];
 
   const sources = [];

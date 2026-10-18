@@ -1,117 +1,85 @@
 # thinktree · 实施编排 (PLAN)
 
-> 依据 `SPEC.md`。本文件定义**模块边界、接口契约、交付阶段与验收点**。实现严格按此编排推进。
+> 依据 `SPEC.md`。本文件定义模块边界、接口契约与当前进度。
 
-## 1. 目录与模块边界
+## 1. 目录结构
 
 ```
 thinktree/
-├── SPEC.md                 约束与规格（唯一需求来源）
-├── PLAN.md                 本文件（编排）
-├── package.json            后端（零运行时依赖）
+├── SPEC.md / PLAN.md / AGENTS.md
+├── package.json                 后端（零运行时依赖）
 ├── src/
-│   ├── schema/trace.js     统一数据模型（契约）
-│   ├── sources/            各 agent 源（每个 agent 一个文件）
-│   │   ├── opencode.js     本期唯一源
-│   │   └── _adapter.md     适配器接口约定
-│   ├── proc.js             进程存活 + 前台窗口聚焦（PowerShell 轮询）
-│   ├── registry.js         汇总所有源的活会话，标注 alive/focused/lastActive
-│   ├── server/index.js     后端 API + SSE + 托管前端产物
-│   └── web/
-│       ├── dist/           前端构建产物（git 忽略）
-│       └── index.html      开发回退占位
-├── webapp/                 前端工程（依赖隔离，独立 node_modules）
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── index.html
+│   ├── schema/trace.js          统一数据模型（契约）
+│   ├── proc.js                  进程存活 + 前台窗口聚焦（PowerShell worker）
+│   ├── registry.js              汇总所有源的活会话
+│   ├── sources/
+│   │   ├── index.js             源注册表
+│   │   ├── util.js              JSONL/SQLite 解析共用工具
+│   │   ├── opencode.js          SQLite（v2 + legacy）
+│   │   ├── pi.js                pi JSONL
+│   │   ├── codex.js             Codex rollout JSONL
+│   │   ├── kimi.js              Kimi wire.jsonl + state.json
+│   │   ├── zcode.js             ZCode SQLite
+│   │   └── cline.js             Cline VSCode 任务
+│   ├── adapters/                opencode 底层读取器 + 配置
+│   ├── server/index.js          API + SSE + 托管前端产物
+│   └── web/dist/                前端构建产物（git 忽略）
+├── webapp/                      前端工程（依赖隔离）
 │   └── src/
-│       ├── main.jsx
-│       ├── App.jsx         外壳：连接、tab 栏
-│       ├── api.js          /api 客户端 + SSE
-│       ├── layout.js       dagre 分层布局 + d3-force 概览
-│       ├── lody.js         zoom → LOD 档位
+│       ├── App.jsx              外壳 / tab / 主题 / 语言
+│       ├── api.js               /api 客户端 + SSE
+│       ├── layout.js            树 + 分层网格布局、防重叠
+│       ├── lod.js               zoom → LOD
+│       ├── i18n.js              中英词典
+│       ├── styles.css           主题变量与全部样式
 │       └── canvas/
-│           ├── GraphCanvas.jsx
-│           └── nodes/      SendNode / ReasonNode / ToolNode / AnswerNode…
-└── workfile-temp/          临时文件（git 忽略）
+│           ├── GraphCanvas.jsx  画布、展开、拖拽、避让、高亮
+│           ├── NodeCard.jsx     节点卡片 / 框内展开详情
+│           ├── FlowEdge.jsx     流动虚线边
+│           ├── KindIcon.jsx     自绘极简 SVG 图标
+│           └── context.js       LOD / 语言 / 展开上下文
+└── workfile-temp/               临时文件（git 忽略）
 ```
 
-## 2. 依赖隔离规则（硬约束）
+## 2. Source 接口
 
-- **后端 `package.json` 无任何 dependencies**；只用 Node 内置（`node:sqlite`/`node:http`/`node:fs`…）。
-- **前端依赖全部在 `webapp/`**（react / @xyflow/react / @dagrejs/dagre / d3-force / vite）。
-- 前端**不**直接读文件/进程；一切经后端 `/api`。
-- 构建：`npm run build:web` → 产物进 `src/web/dist`，由后端托管；开发用 `npm run dev:web`（vite 代理 `/api` → 后端）。
-
-## 3. 接口契约
-
-### 3.1 Source 适配器（`src/sources/<agent>.js`）
 ```js
-export function create<Agent>Source(opts) {
-  return {
-    id, name, interface, available,      // 元信息
-    listLiveSessions(procSnapshot),      // → 活会话摘要[]
-    getSession(rawId),                   // → 统一 Session（含 turns/events）
-    subscribe(cb)                        // 可选：变更回调（实时）
-  }
+{
+  id, name, interface, description, available,
+  processPatterns: RegExp[],                     // 进程存活判定
+  listLive(procSnapshot) -> { processes, sessions },
+  getSession(rawId) -> 统一 Session
 }
 ```
 
-### 3.2 后端 API（见 SPEC §9）
-`/api/agents` · `/api/session/:source/:id` · `/api/stream`(SSE) · `/api/proc`
+新增 agent：在 `sources/` 加文件 + 在 `sources/index.js` 登记，**不动 UI/server**。
 
-### 3.3 前端引擎（纯函数，可单测）
-- `layout.js`：`buildGraph(session) → {nodes, edges}`；`layoutDagre(nodes, edges)`；`layoutForce(nodes, edges)`。
-- `lody.js`：`lodFor(zoom) → 'far'|'mid'|'near'`（阈值可配）。
+## 3. 进度
 
-## 4. 交付阶段与验收
+| 模块 | 状态 |
+|---|---|
+| 统一 schema / 模型调用节点 | ✅ |
+| 进程存活 + 前台聚焦（PowerShell） | ✅ |
+| opencode 源（v2 + legacy） | ✅ |
+| pi 源 | ✅ |
+| Codex 源 | ✅ |
+| Kimi 源 | ✅ |
+| ZCode 源 | ✅ |
+| Cline 源（无任务时 available=false） | ✅ |
+| 后端 API / SSE | ✅ |
+| 前端工程 / 依赖隔离 | ✅ |
+| 树状 + 分层网格布局（接近方形） | ✅ |
+| 语义缩放 LOD | ✅ |
+| 框内展开（实测高度重排） | ✅ |
+| 拖拽 / 框选 / 实时避让 / 30px 间距 / 回弹 | ✅ |
+| 流动虚线 + 最新上下文高亮 + 焦点洋红高亮 | ✅ |
+| 深/浅主题 + 中英切换 + SVG 图标 | ✅ |
+| 提交规范（每次改动即提交） | ✅（见 AGENTS.md） |
 
-### Phase 0 — 约束与编排 ✅（本文件 + SPEC.md）
-- 验收：SPEC/PLAN 存在且一致；git 仓库已建。
+## 4. 后续可选
 
-### Phase 1 — 后端骨架（可达、可测）
-- 交付：`proc.js`、`sources/opencode.js`（由现有 adapter 迁移）、`registry.js`、`server/index.js`。
-- 验收：
-  - `GET /api/proc` 返回运行中的 agent 进程 + 前台窗口。
-  - `GET /api/agents` 只返回**活会话**（opencode 进程存活时）。
-  - `GET /api/session/opencode/<id>` 返回统一 Session。
-  - `/api/stream` SSE 在会话更新后 ≤2s 推送一次。
-
-### Phase 2 — 前端骨架 + 画布
-- 交付：webapp 工程、`App.jsx`（tab 栏）、《GraphCanvas》、节点组件。
-- 验收：
-  - 拉取 `/api/agents`，每个活会话一个 tab。
-  - 画布用 dagre 渲染 `发送→思考/工具→回答`，含连线。
-  - 无限画布可平移/缩放。
-
-### Phase 3 — 语义缩放 LOD
-- 交付：`lody.js` + 节点按档位切换渲染。
-- 验收：远（只留结构与连线）/ 中（标题）/ 近（细节+IO）三档正确切换。
-
-### Phase 4 — 实时联通
-- 交付：`api.js` SSE 客户端，增量更新画布。
-- 验收：opencode 产生新事件 → 面板 ≤2s 出现新节点；进程退出 → tab 消失。
-
-### Phase 5 — 端到端验收
-- 验收：开一个真实 opencode 会话跑一轮工具调用，面板实时、正确呈现整个信息流。
-
-### Phase 6 — 扩展源（后续）
-- 依次新增 `sources/{pi,cline,kimi,zcode,codex}.js`，每个只依赖 §3.1 契约，**不动 UI**。
-
-## 5. 任务看板
-
-| # | 任务 | 阶段 | 状态 |
-|---|---|---|---|
-| 1 | SPEC.md | 0 | ✅ |
-| 2 | PLAN.md | 0 | ✅ |
-| 3 | git 仓库 + .gitignore | 0 | ✅ |
-| 4 | 依赖隔离（webapp 工程骨架） | 0 | ⬜ |
-| 5 | src/proc.js 进程/聚焦 | 1 | ⬜ |
-| 6 | src/sources/opencode.js 迁移 | 1 | ⬜ |
-| 7 | src/registry.js | 1 | ⬜ |
-| 8 | src/server/index.js 重写 | 1 | ⬜ |
-| 9 | webapp 骨架 + tab 栏 | 2 | ⬜ |
-| 10 | GraphCanvas + 节点组件 | 2 | ⬜ |
-| 11 | 语义缩放 LOD | 3 | ⬜ |
-| 12 | SSE 实时联通 | 4 | ⬜ |
-| 13 | 端到端联调 | 5 | ⬜ |
+- ZCode `rollout/model-io-*.jsonl` 原始 request/response 透传到 model-call 节点。
+- JSONL 增量 tail（避免每次整文件读取）。
+- PTY 兜底源（无本地存储的 CLI agent）。
+- 大数据量下的虚拟化/性能优化。
+- 更多 agent（Claude Code、Gemini CLI 等）。

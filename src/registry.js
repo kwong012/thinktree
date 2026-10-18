@@ -35,7 +35,7 @@ export function createRegistry() {
           sessions,
         };
       })
-      .filter((a) => a.alive);
+      .filter((a) => a.alive && a.sessions.length > 0);
 
     agents.sort((a, b) => Number(b.focused) - Number(a.focused) || lastActive(b) - lastActive(a));
 
