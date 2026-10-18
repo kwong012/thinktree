@@ -254,7 +254,6 @@ body {
 .help-btn.on::after { transform: rotate(180deg); }
 .help-pop {
   position: absolute; top: 36px; right: 0;
-  width: 430px; max-width: calc(100vw - 48px);
   background: var(--panel);
   border: 1px solid var(--border-strong);
   padding: 10px 14px 12px;
@@ -265,7 +264,10 @@ body {
   font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
   color: var(--faint); margin-bottom: 8px;
 }
-.help-pop ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.help-pop ul {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: 1fr; gap: 6px;
+}
 .help-pop li { display: flex; gap: 8px; line-height: 1.5; }
 .help-pop li span {
   flex: 0 0 auto; color: var(--accent);
@@ -456,7 +458,7 @@ body {
 .react-flow__minimap.tt-minimap {
   width: 390px;
   height: 255px;
-  border: 1px solid #5c5c5c;
+  border: 1.5px solid #ffffff;
   z-index: 20;
   background: var(--panel);
   box-shadow: none;

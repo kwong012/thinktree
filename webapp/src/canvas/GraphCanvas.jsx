@@ -270,6 +270,19 @@ function Inner({ session, onRefresh, refreshing }) {
   const [measuredH, setMeasuredH] = useState(0);
   const [showMini, setShowMini] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpW, setHelpW] = useState(0);
+  const actionsRef = useRef(null);
+
+  useEffect(() => {
+    if (!helpOpen) return undefined;
+    const el = actionsRef.current;
+    if (!el) return undefined;
+    const sync = () => setHelpW(el.offsetWidth);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [helpOpen]);
   const [framedTurn, setFramedTurn] = useState(null);
   const [frameRect, setFrameRect] = useState(null);
   const [treeOpen, setTreeOpen] = useState(() => localStorage.getItem('tt-tree') !== '0');
@@ -658,7 +671,7 @@ function Inner({ session, onRefresh, refreshing }) {
           ))}
         </div>
         <div className="spacer" />
-        <div className="tb-actions">
+        <div className="tb-actions" ref={actionsRef}>
           <button onClick={onRefresh} disabled={refreshing}>
             {t(lang, 'refresh')}
           </button>
@@ -669,12 +682,18 @@ function Inner({ session, onRefresh, refreshing }) {
             {t(lang, 'fitAll')}
           </button>
           <button onClick={() => centerLast(1, 450)}>{t(lang, 'latest')}</button>
-          <button className={`help-btn${helpOpen ? ' on' : ''}`} onClick={() => setHelpOpen((v) => !v)}>
+          <button
+            className={`help-btn${helpOpen ? ' on' : ''}`}
+            onClick={() => {
+              if (!helpOpen) setHelpW(actionsRef.current?.offsetWidth || 0);
+              setHelpOpen((v) => !v);
+            }}
+          >
             {t(lang, 'help')}
           </button>
         </div>
         {helpOpen ? (
-          <div className="help-pop">
+          <div className="help-pop" style={helpW ? { width: helpW } : undefined}>
             <div className="help-title">{t(lang, 'helpTitle')}</div>
             <ul>
               {(t(lang, 'helpItems') || []).map((line, i) => (
