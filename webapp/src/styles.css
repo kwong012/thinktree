@@ -389,6 +389,8 @@ body {
 @keyframes tt-dash-flow {
   to { stroke-dashoffset: -11; }
 }
+/* 平移/缩放/拖动时暂停虚线动画，避免每帧重绘拖慢交互。 */
+.canvas-wrap.moving .react-flow__edge-path.edge-flow { animation: none; }
 .react-flow__edge-path.edge-thread {
   stroke-dasharray: none;
   stroke: var(--thread) !important;

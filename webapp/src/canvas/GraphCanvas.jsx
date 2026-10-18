@@ -377,6 +377,13 @@ function Inner({ session, onRefresh, refreshing }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
+  // 复用上一帧的节点/边对象：未变化的元素保持同一引用，
+  // ReactFlow 与其内部 memo 即可跳过重渲染（SSE 增量时只动变化的那一轮）。
+  const prevNodesRef = useRef(new Map());
+  const prevEdgesRef = useRef(new Map());
+  const wrapRef = useRef(null);
+  const setMoving = (v) => wrapRef.current?.classList.toggle('moving', v);
+
   // 包络框：跟随该轮所有节点的当前位置（拖动时实时更新）。
   useEffect(() => {
     if (framedTurn == null) {
@@ -478,52 +485,87 @@ function Inner({ session, onRefresh, refreshing }) {
       }
     }
 
-    setNodes(
-      computed.nodes.map((n) => {
-        const [w, h] = NODE_SIZE[n.data.kind] || [220, 90];
-        const isExpanded = n.id === expandedId;
-        return {
-          ...n,
-          selected: framedTurn != null && (n.data.turnIndex ?? -1) === framedTurn,
-          className: related.has(n.id) ? 'focus-rel' : undefined,
-          zIndex: isExpanded ? 1000 : undefined,
-          width: isExpanded ? EXPANDED_W : w,
-          height: isExpanded ? undefined : h,
-          style: isExpanded
-            ? { width: EXPANDED_W, minHeight: expandedH }
-            : { ...n.style, width: w, height: h },
-        };
-      }),
-    );
+    const nextNodes = computed.nodes.map((n) => {
+      const [w, h] = NODE_SIZE[n.data.kind] || [220, 90];
+      const isExpanded = n.id === expandedId;
+      const selected = framedTurn != null && (n.data.turnIndex ?? -1) === framedTurn;
+      const className = related.has(n.id) ? 'focus-rel' : undefined;
+      const zIndex = isExpanded ? 1000 : undefined;
+      const width = isExpanded ? EXPANDED_W : w;
+      const height = isExpanded ? undefined : h;
+      const style = isExpanded
+        ? { width: EXPANDED_W, minHeight: expandedH }
+        : { ...n.style, width: w, height: h };
 
-    setEdges(
-      computed.edges.map((e) => {
-        const look = classifyEdge(e, nodeById, turnById, lastTurn, latestHasCache, expandedId);
+      const prev = prevNodesRef.current.get(n.id);
+      if (
+        prev &&
+        prev.data === n.data &&
+        prev.selected === selected &&
+        prev.className === className &&
+        prev.zIndex === zIndex &&
+        prev.width === width &&
+        prev.height === height &&
+        prev.position.x === n.position.x &&
+        prev.position.y === n.position.y &&
+        prev.style?.width === style.width &&
+        prev.style?.height === style.height &&
+        prev.style?.minHeight === style.minHeight
+      ) {
+        return prev;
+      }
 
-        return {
-          ...e,
-          type: 'tt',
-          animated: false,
-          hidden: lod === 'far',
-          data: { ...(e.data || {}), animate: look.active || look.focusEdge },
-          className: look.focusEdge
-            ? 'edge-focus'
-            : look.contextEdge
-              ? 'edge-context'
-              : undefined,
-          label: look.cross ? t(lang, 'contextLabel') : undefined,
-          labelStyle: { fill: 'var(--muted)', fontSize: 9 },
-          labelBgStyle: { fill: 'var(--bg)', fillOpacity: 0.85 },
-          labelBgPadding: [3, 2],
-          labelBgBorderRadius: 4,
-          style: {
-            stroke: look.color,
-            strokeWidth: look.width,
-            strokeDasharray: look.dashed ? '5 4' : undefined,
-          },
-        };
-      }),
-    );
+      return { ...n, selected, className, zIndex, width, height, style };
+    });
+    prevNodesRef.current = new Map(nextNodes.map((n) => [n.id, n]));
+    setNodes(nextNodes);
+
+    const liveEdgeIds = new Set();
+    let animBudget = 40;
+    const nextEdges = computed.edges.map((e) => {
+      const look = classifyEdge(e, nodeById, turnById, lastTurn, latestHasCache, expandedId);
+      const hidden = lod === 'far';
+      const animate = (look.active || look.focusEdge) && animBudget > 0;
+      if (animate) animBudget -= 1;
+      const className = look.focusEdge
+        ? 'edge-focus'
+        : look.contextEdge
+          ? 'edge-context'
+          : undefined;
+      const label = look.cross ? t(lang, 'contextLabel') : undefined;
+      const sig = `${look.color}|${look.width}|${look.dashed ? 1 : 0}|${animate ? 1 : 0}|${
+        hidden ? 1 : 0
+      }|${label || ''}|${className || ''}|${e.source}|${e.target}`;
+
+      liveEdgeIds.add(e.id);
+      const prev = prevEdgesRef.current.get(e.id);
+      if (prev && prev.sig === sig) return prev.edge;
+
+      const edge = {
+        ...e,
+        type: 'tt',
+        animated: false,
+        hidden,
+        data: { ...(e.data || {}), animate },
+        className,
+        label,
+        labelStyle: { fill: 'var(--muted)', fontSize: 9 },
+        labelBgStyle: { fill: 'var(--bg)', fillOpacity: 0.85 },
+        labelBgPadding: [3, 2],
+        labelBgBorderRadius: 4,
+        style: {
+          stroke: look.color,
+          strokeWidth: look.width,
+          strokeDasharray: look.dashed ? '5 4' : undefined,
+        },
+      };
+      prevEdgesRef.current.set(e.id, { sig, edge });
+      return edge;
+    });
+    for (const id of prevEdgesRef.current.keys()) {
+      if (!liveEdgeIds.has(id)) prevEdgesRef.current.delete(id);
+    }
+    setEdges(nextEdges);
   }, [computed, expandedId, expandedH, framedTurn, lang, lod, setNodes, setEdges]);
 
   // 展开后，等新布局生效再把该框居中。
@@ -632,6 +674,7 @@ function Inner({ session, onRefresh, refreshing }) {
 
   return (
     <div
+      ref={wrapRef}
       className={`canvas-wrap lod-${lod}`}
       onPointerDownCapture={onMiniDown}
       onClickCapture={onMiniClick}
@@ -720,14 +763,18 @@ function Inner({ session, onRefresh, refreshing }) {
               const l = lodFor(vp.zoom);
               setLod((prev) => (prev === l ? prev : l));
             }}
+            onMoveStart={() => setMoving(true)}
+            onMoveEnd={() => setMoving(false)}
             onNodeClick={onNodeClick}
             onNodeContextMenu={onNodeContextMenu}
             onNodeDragStart={() => {
               dragGuard.current = Date.now();
+              setMoving(true);
             }}
             onNodeDrag={(_, node) => avoidOverlap(node)}
             onNodeDragStop={(_, node, dragged) => {
               dragGuard.current = Date.now();
+              setMoving(false);
               for (const n of dragged?.length ? dragged : [node]) {
                 posRef.current.set(n.id, n.position);
               }

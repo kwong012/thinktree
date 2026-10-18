@@ -21,6 +21,21 @@ function nodeSize(kind) {
   return NODE_SIZE[kind] || [220, 90];
 }
 
+// 事件对象在会话增量刷新时保持引用不变：缓存 node.data，
+// 让 NodeCard 的 memo 能跳过未变化节点，避免每 1.2s 全量重渲染。
+const dataCache = new WeakMap();
+
+function cachedData(kind, ev, result, turnIndex) {
+  let byKind = dataCache.get(ev);
+  if (!byKind) dataCache.set(ev, (byKind = new Map()));
+  let d = byKind.get(kind);
+  if (!d || d.result !== result || d.turnIndex !== turnIndex) {
+    d = { kind, ev, result, turnIndex };
+    byKind.set(kind, d);
+  }
+  return d;
+}
+
 export function buildGraph(session, { turnIndex } = {}) {
   const nodes = [];
   const edges = [];
@@ -43,7 +58,7 @@ export function buildGraph(session, { turnIndex } = {}) {
         id,
         type: 'tt',
         position: { x: 0, y: 0 },
-        data: { kind, ev, result, turnIndex: turn.index },
+        data: cachedData(kind, ev, result, turn.index),
       });
       if (parentId) {
         edges.push({
