@@ -13,6 +13,7 @@ import NodeCard from './NodeCard.jsx';
 import FlowEdge from './FlowEdge.jsx';
 import TurnFrame from './TurnFrame.jsx';
 import DesignTree from './DesignTree.jsx';
+import { createPhysics } from './physics.js';
 import { LodCtx, LangCtx, ExpandCtx } from './context.js';
 import { buildGraph, layoutGraph, NODE_SIZE, MIN_GAP } from '../layout.js';
 import { lodFor } from '../lod.js';
@@ -23,6 +24,7 @@ const edgeTypes = { tt: FlowEdge };
 const LOD_KEY = { far: 'lodFar', mid: 'lodMid', near: 'lodNear' };
 
 const EXPANDED_W = 520;
+const PHYSICS_MODE = 'return';
 
 const MINI_COLOR = {
   send: '#6871ff',
@@ -289,9 +291,11 @@ function Inner({ session, onRefresh, refreshing }) {
   // 用户手动拖拽后的位置（跨实时刷新保留）
   const posRef = useRef(new Map());
   const [dragVersion, setDragVersion] = useState(0);
-  const dragTick = useRef(0);
   const dragGuard = useRef(0);
   const miniDown = useRef(null);
+  const physRef = useRef(null);
+  const rafRef = useRef(0);
+  const dragInfo = useRef(null);
 
   // 点击小地图空白处 → 视口跳到对应位置（拖动视口矩形时不触发）。
   const onMiniDown = (e) => {
@@ -313,42 +317,123 @@ function Inner({ session, onRefresh, refreshing }) {
     rf.setCenter(loc.x, loc.y, { zoom: rf.getViewport().zoom, duration: 300 });
   };
 
-  // 拖动时被压到的框即时让位（无需等松手）。
-  const avoidOverlap = (dragged) => {
-    const now = performance.now();
-    if (now - dragTick.current < 55) return;
-    dragTick.current = now;
+  // ---- 拖动碰撞物理：被撞开的节点实时让位并回弹 ----
+  const stopLoop = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = 0;
+  };
 
-    const ax = dragged.position.x;
-    const ay = dragged.position.y;
-    const dw = dragged.measured?.width ?? dragged.width ?? 240;
-    const dh = dragged.measured?.height ?? dragged.height ?? 100;
+  const startLoop = () => {
+    if (rafRef.current) return;
+    const tick = (now) => {
+      rafRef.current = 0;
+      const eng = physRef.current;
+      if (!eng) return;
+      const res = eng.step(now);
 
-    setNodes((ns) => {
-      let changed = false;
-      const next = ns.map((n) => {
-        if (n.id === dragged.id) return n;
-        if (framedTurn != null && (n.data?.turnIndex ?? -1) === framedTurn) return n;
-        const w = n.measured?.width ?? n.width ?? 240;
-        const h = n.measured?.height ?? n.height ?? 100;
-        const ox = Math.min(ax + dw, n.position.x + w) - Math.max(ax, n.position.x) + MIN_GAP;
-        const oy = Math.min(ay + dh, n.position.y + h) - Math.max(ay, n.position.y) + MIN_GAP;
-        if (ox <= 0 || oy <= 0) return n;
+      if (res.moved.size) {
+        setNodes((ns) => {
+          let changed = false;
+          const next = ns.map((n) => {
+            const p = res.moved.get(n.id);
+            if (!p) return n;
+            if (Math.abs(n.position.x - p.x) < 0.01 && Math.abs(n.position.y - p.y) < 0.01) return n;
+            changed = true;
+            return { ...n, position: { x: p.x, y: p.y } };
+          });
+          return changed ? next : ns;
+        });
+      }
 
-        changed = true;
-        let pos;
-        if (ox < oy) {
-          const dir = ax + dw / 2 < n.position.x + w / 2 ? 1 : -1;
-          pos = { x: n.position.x + dir * ox, y: n.position.y };
-        } else {
-          const dir = ay + dh / 2 < n.position.y + h / 2 ? 1 : -1;
-          pos = { x: n.position.x, y: n.position.y + dir * oy };
+      if (res.settled) {
+        if (res.touched.size) {
+          for (const id of res.touched) {
+            const b = eng.bodies().get(id);
+            if (b) posRef.current.set(id, { x: b.x, y: b.y });
+          }
+          setDragVersion((v) => v + 1);
         }
-        posRef.current.set(n.id, pos);
-        return { ...n, position: pos };
-      });
-      return changed ? next : ns;
-    });
+        return;
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
+  useEffect(() => stopLoop, []);
+
+  const beginDrag = (node) => {
+    stopLoop();
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const selected = nodes.filter((n) => n.type === 'tt' && n.selected).map((n) => n.id);
+    const ids = selected.includes(node.id) ? selected : [node.id];
+
+    const items = [];
+    const starts = new Map();
+    for (const n of nodes) {
+      if (n.type !== 'tt') continue;
+      const w = n.measured?.width ?? n.width ?? 240;
+      const h = n.measured?.height ?? n.height ?? 100;
+      items.push({ id: n.id, x: n.position.x, y: n.position.y, w, h });
+    }
+    for (const id of ids) {
+      const n = byId.get(id);
+      if (n) starts.set(id, { x: n.position.x, y: n.position.y });
+    }
+
+    const eng = createPhysics({ mode: PHYSICS_MODE, gap: MIN_GAP });
+    eng.sync(items);
+    eng.setKinematic(ids);
+    physRef.current = eng;
+    dragInfo.current = {
+      ids,
+      start: { x: node.position.x, y: node.position.y },
+      starts,
+      last: { x: node.position.x, y: node.position.y, t: performance.now() },
+    };
+    setMoving(true);
+    startLoop();
+  };
+
+  const moveDrag = (node) => {
+    const info = dragInfo.current;
+    const eng = physRef.current;
+    if (!info || !eng) return;
+    const now = performance.now();
+    const dt = Math.max(8, now - info.last.t) / 1000;
+    const vx = Math.max(-1600, Math.min(1600, (node.position.x - info.last.x) / dt));
+    const vy = Math.max(-1600, Math.min(1600, (node.position.y - info.last.y) / dt));
+    const mx = node.position.x - info.start.x;
+    const my = node.position.y - info.start.y;
+
+    const moves = new Map();
+    for (const id of info.ids) {
+      const s = info.starts.get(id);
+      if (!s) continue;
+      moves.set(id, { x: s.x + mx, y: s.y + my, vx, vy });
+    }
+    eng.moveKinematic(moves);
+    info.last = { x: node.position.x, y: node.position.y, t: now };
+  };
+
+  const endDrag = (node) => {
+    const info = dragInfo.current;
+    const eng = physRef.current;
+    if (info && eng) {
+      moveDrag(node);
+      eng.release(info.ids);
+    }
+    dragInfo.current = null;
+    if (!info || !eng) return;
+
+    // 拖拽节点立即记下落点，避免 settle 前的重排把它拉回原位。
+    const mx = node.position.x - info.start.x;
+    const my = node.position.y - info.start.y;
+    for (const id of info.ids) {
+      const s = info.starts.get(id);
+      if (s) posRef.current.set(id, { x: s.x + mx, y: s.y + my });
+    }
+    startLoop();
   };
 
   useEffect(() => {
@@ -767,18 +852,15 @@ function Inner({ session, onRefresh, refreshing }) {
             onMoveEnd={() => setMoving(false)}
             onNodeClick={onNodeClick}
             onNodeContextMenu={onNodeContextMenu}
-            onNodeDragStart={() => {
+            onNodeDragStart={(_, node) => {
               dragGuard.current = Date.now();
-              setMoving(true);
+              beginDrag(node);
             }}
-            onNodeDrag={(_, node) => avoidOverlap(node)}
-            onNodeDragStop={(_, node, dragged) => {
+            onNodeDrag={(_, node) => moveDrag(node)}
+            onNodeDragStop={(_, node) => {
               dragGuard.current = Date.now();
               setMoving(false);
-              for (const n of dragged?.length ? dragged : [node]) {
-                posRef.current.set(n.id, n.position);
-              }
-              setDragVersion((v) => v + 1);
+              endDrag(node);
             }}
             onPaneClick={() => {
               setHelpOpen(false);
