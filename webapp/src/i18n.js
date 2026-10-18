@@ -60,6 +60,16 @@ const DICT = {
     hideTree: '收起轨迹',
     showTree: '展开轨迹',
     sendHint: '单击展开 · 右键包络整轮',
+    help: '说明',
+    helpTitle: '使用说明',
+    helpItems: [
+      '单击任意框：展开 / 收起详细内容',
+      '右键用户提问框：包络 / 取消整轮问答',
+      '双击画布：回到最新位置',
+      '左侧轨迹：单击跳到节点，箭头展开步骤',
+      '小地图：单击跳转，可拖动与缩放',
+      '缩放：远看结构，近看细节',
+    ],
     kind: {
       send: '发送',
       context: '上下文',
@@ -128,6 +138,16 @@ const DICT = {
     hideTree: 'Collapse trace',
     showTree: 'Expand trace',
     sendHint: 'Click to expand · right-click to frame turn',
+    help: 'Help',
+    helpTitle: 'How to use',
+    helpItems: [
+      'Click any card to expand details',
+      'Right-click a prompt to frame its turn',
+      'Double-click the canvas to jump to latest',
+      'Trace panel: click to jump, caret to expand',
+      'Minimap: click to jump, drag or zoom',
+      'Zoom out for structure, in for detail',
+    ],
     kind: {
       send: 'Prompt',
       context: 'Context',

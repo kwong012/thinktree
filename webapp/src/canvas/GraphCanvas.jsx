@@ -269,6 +269,7 @@ function Inner({ session, onRefresh, refreshing }) {
   const [expandedId, setExpandedId] = useState(null);
   const [measuredH, setMeasuredH] = useState(0);
   const [showMini, setShowMini] = useState(true);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [framedTurn, setFramedTurn] = useState(null);
   const [frameRect, setFrameRect] = useState(null);
   const [treeOpen, setTreeOpen] = useState(() => localStorage.getItem('tt-tree') !== '0');
@@ -584,6 +585,7 @@ function Inner({ session, onRefresh, refreshing }) {
   }, [session?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodeClick = (event, node) => {
+    setHelpOpen(false);
     if (Date.now() - dragGuard.current < 250) return;
     // Shift/Ctrl/Cmd 用于多选，不触发交互
     if (event.shiftKey || event.metaKey || event.ctrlKey) return;
@@ -667,7 +669,23 @@ function Inner({ session, onRefresh, refreshing }) {
             {t(lang, 'fitAll')}
           </button>
           <button onClick={() => centerLast(1, 450)}>{t(lang, 'latest')}</button>
+          <button className={`help-btn${helpOpen ? ' on' : ''}`} onClick={() => setHelpOpen((v) => !v)}>
+            {t(lang, 'help')}
+          </button>
         </div>
+        {helpOpen ? (
+          <div className="help-pop">
+            <div className="help-title">{t(lang, 'helpTitle')}</div>
+            <ul>
+              {(t(lang, 'helpItems') || []).map((line, i) => (
+                <li key={i}>
+                  <span>{String(i + 1).padStart(2, '0')}</span>
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
 
       <ExpandCtx.Provider value={expandedId}>
@@ -697,6 +715,7 @@ function Inner({ session, onRefresh, refreshing }) {
               setDragVersion((v) => v + 1);
             }}
             onPaneClick={() => {
+              setHelpOpen(false);
               setExpandedId(null);
               setFramedTurn(null);
             }}
