@@ -93,3 +93,9 @@ thinktree/
 - 双击 `scripts/thinktree.bat`：启动服务并打开浏览器。
 - 关闭浏览器标签/窗口后，SSE 客户端归零，服务在 5 秒后自动退出。
 - 手动运行：`npm start`（不会自动退出）。
+
+## 6. 会话定位
+
+- CLI/TUI：读取进程 cwd，只显示匹配到的当前会话（不列历史）。
+- pi：额外读取 Windows Terminal 标签页 `π - <会话名> - <用户>`，按 `session_info.name` 精确匹配。
+- 桌面端：不参与 cwd 匹配。

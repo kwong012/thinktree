@@ -14,6 +14,7 @@ import {
   addUsage,
 } from '../schema/trace.js';
 import { findProcesses } from '../proc.js';
+import { getPiSessionName, startTerminalWatcher } from '../terminal.js';
 import {
   safeJson,
   readFirstLine,
@@ -37,7 +38,8 @@ let cache = { at: 0, list: [], byId: new Map() };
 const titleCache = new Map();
 
 /** 用首条用户消息作为标题（只读文件头部 256KB）。 */
-function firstUserText(path) {
+function scanHead(path) {
+  const out = { title: '', name: '' };
   try {
     const fd = openSync(path, 'r');
     const buf = Buffer.alloc(256 * 1024);
@@ -47,13 +49,14 @@ function firstUserText(path) {
       if (!line.trim()) continue;
       let row;
       try { row = JSON.parse(line); } catch { continue; }
-      if (row.type === 'message' && row.message?.role === 'user') {
+      if (row.type === 'session_info' && row.name) out.name = row.name;
+      if (!out.title && row.type === 'message' && row.message?.role === 'user') {
         const t = contentText(row.message.content).replace(/\s+/g, ' ').trim();
-        if (t) return t.slice(0, 90);
+        if (t) out.title = t.slice(0, 90);
       }
     }
   } catch {}
-  return '';
+  return out;
 }
 
 function scan() {
@@ -66,12 +69,14 @@ function scan() {
     const stamp = mtime(path);
     let cached = titleCache.get(path);
     if (!cached || cached.stamp !== stamp) {
-      cached = { stamp, title: firstUserText(path) || dirName(head.cwd) || head.id };
+      const info = scanHead(path);
+      cached = { stamp, name: info.name, title: info.name || info.title || dirName(head.cwd) || head.id };
       titleCache.set(path, cached);
     }
     const item = {
       id: head.id,
       title: cached.title,
+      name: cached.name || '',
       agent: 'pi',
       model: {},
       directory: head.cwd,
@@ -88,6 +93,7 @@ function scan() {
 }
 
 export function createPiSource() {
+  startTerminalWatcher();
   return {
     id: 'pi',
     name: 'pi',
@@ -98,7 +104,13 @@ export function createPiSource() {
 
     listLive(procSnapshot) {
       const { list } = scan();
-      const live = pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
+      const activeName = getPiSessionName();
+      let ordered = list;
+      if (activeName) {
+        const i = list.findIndex((s) => s.name && s.name.toLowerCase() === activeName.toLowerCase());
+        if (i > 0) ordered = [list[i], ...list.slice(0, i), ...list.slice(i + 1)];
+      }
+      const live = pickLive(procSnapshot, PATTERNS, ordered, { aliveWindow: ALIVE_WINDOW });
       live.sessions = preferCwd(live.sessions, live.processes);
       return live;
     },
