@@ -1,7 +1,7 @@
 ﻿param([switch]$Status, [switch]$Preview)
 
 $ErrorActionPreference = 'Stop'
-$Root = Split-Path -Parent $PSScriptRoot
+$Root = $PSScriptRoot
 $Port = 5517
 $Url = "http://localhost:$Port"
 $LogDir = Join-Path $Root 'logs'
