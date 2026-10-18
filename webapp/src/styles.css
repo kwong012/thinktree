@@ -1,30 +1,30 @@
 /* ---------- flat dark tokens ---------- */
 :root {
   color-scheme: dark;
-  --bg: #0b0c0e;
-  --panel: #101216;
-  --panel2: #171a1f;
-  --border: #262a31;
-  --border-strong: #363b44;
-  --text: #e7e4dd;
-  --muted: #8b8e95;
-  --faint: #5d6168;
-  --accent: #c8a24a;
+  --bg: #000000;
+  --panel: #0b0c0e;
+  --panel2: #13151a;
+  --border: #2c3139;
+  --border-strong: #3e444f;
+  --text: #f3f0e9;
+  --muted: #a9adb5;
+  --faint: #787d86;
+  --accent: #e2b75c;
 
-  --node-bg: #111317;
+  --node-bg: #101216;
   --node-hover: #15181d;
-  --edge: #363a42;
-  --edge-cross: #6d5c3a;
-  --edge-far: #5a5f68;
-  --chip-bg: #1c2026;
-  --chip-text: #9a9da4;
-  --pre-bg: #0a0b0d;
-  --pre-text: #a8acb3;
-  --minimap-mask: rgba(9, 10, 12, 0.72);
-  --focus: #c07a9a;
-  --frame: #70757d;
-  --thread: #6e747d;
-  --highlight: #c8a24a;
+  --edge: #4b515c;
+  --edge-cross: #8d7649;
+  --edge-far: #77808c;
+  --chip-bg: #21252d;
+  --chip-text: #bcc0c8;
+  --pre-bg: #000000;
+  --pre-text: #c6cad1;
+  --minimap-mask: rgba(0, 0, 0, 0.78);
+  --focus: #dd8fb3;
+  --frame: #8d939d;
+  --thread: #8a919c;
+  --highlight: #e2b75c;
 }
 
 * { box-sizing: border-box; }
@@ -230,12 +230,12 @@ body {
 }
 
 /* ---------- kind colors (muted) ---------- */
-.ttnode.kind-send, .ttmini.kind-send { --c: #5b7fa6; }
-.ttnode.kind-context, .ttmini.kind-context { --c: #8a8d94; }
-.ttnode.kind-model, .ttmini.kind-model { --c: #7d6ea8; }
-.ttnode.kind-reason, .ttmini.kind-reason { --c: #9a86b8; }
-.ttnode.kind-tool, .ttmini.kind-tool { --c: #b0853f; }
-.ttnode.kind-answer, .ttmini.kind-answer { --c: #5f8f74; }
+.ttnode.kind-send, .ttmini.kind-send { --c: #6b9bd1; }
+.ttnode.kind-context, .ttmini.kind-context { --c: #a0a4ac; }
+.ttnode.kind-model, .ttmini.kind-model { --c: #a08bd6; }
+.ttnode.kind-reason, .ttmini.kind-reason { --c: #c0a0e0; }
+.ttnode.kind-tool, .ttmini.kind-tool { --c: #d9a441; }
+.ttnode.kind-answer, .ttmini.kind-answer { --c: #6fbf8f; }
 
 /* ---------- edges ---------- */
 .react-flow__edge-path { vector-effect: non-scaling-stroke; stroke-linecap: round; }
