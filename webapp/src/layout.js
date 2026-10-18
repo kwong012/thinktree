@@ -130,15 +130,15 @@ export function layoutGraph({ nodes, edges }, opts = {}) {
   }
 
   const COLS = 4; // 每行最多几个簇
-  const GAP_X = 44;
-  const GAP_Y = 48;
+  const GAP_X = 52;
+  const GAP_Y = 56;
   const CHILD_COLS = 2;
   const CHILD_W = 250;
-  const CHILD_HGAP = 16;
-  const CHILD_VGAP = 14;
+  const CHILD_HGAP = 30;
+  const CHILD_VGAP = 30;
   const PROMPT_GAP = 48;
-  const TURN_GAP_X = 90;
-  const TURN_GAP_Y = 90;
+  const TURN_GAP_X = 110;
+  const TURN_GAP_Y = 110;
 
   const turnLayouts = [];
 
@@ -330,7 +330,9 @@ export function layoutGraph({ nodes, edges }, opts = {}) {
  * 防重叠：迭代把相交的矩形沿最小穿透方向推开，保证框与框不遮挡。
  * items: [{ id, x, y, w, h }]（就地修改）
  */
-export function resolveOverlaps(items, { gap = 14, iterations = 60 } = {}) {
+export const MIN_GAP = 30;
+
+export function resolveOverlaps(items, { gap = MIN_GAP, iterations = 60 } = {}) {
   if (items.length < 2) return;
 
   for (let it = 0; it < iterations; it++) {

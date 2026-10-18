@@ -13,7 +13,7 @@ import '@xyflow/react/dist/style.css';
 import NodeCard from './NodeCard.jsx';
 import FlowEdge from './FlowEdge.jsx';
 import { LodCtx, LangCtx, ExpandCtx } from './context.js';
-import { buildGraph, layoutGraph, NODE_SIZE } from '../layout.js';
+import { buildGraph, layoutGraph, NODE_SIZE, MIN_GAP } from '../layout.js';
 import { lodFor } from '../lod.js';
 import { t } from '../i18n.js';
 
@@ -74,8 +74,8 @@ function Inner({ session, theme }) {
         if (n.id === dragged.id) return n;
         const w = n.measured?.width ?? n.width ?? 240;
         const h = n.measured?.height ?? n.height ?? 100;
-        const ox = Math.min(ax + dw, n.position.x + w) - Math.max(ax, n.position.x) + 14;
-        const oy = Math.min(ay + dh, n.position.y + h) - Math.max(ay, n.position.y) + 14;
+        const ox = Math.min(ax + dw, n.position.x + w) - Math.max(ax, n.position.x) + MIN_GAP;
+        const oy = Math.min(ay + dh, n.position.y + h) - Math.max(ay, n.position.y) + MIN_GAP;
         if (ox <= 0 || oy <= 0) return n;
 
         changed = true;
