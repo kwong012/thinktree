@@ -127,7 +127,77 @@ body {
 
 /* ---------- canvas ---------- */
 .main { flex: 1; position: relative; min-height: 0; }
-.canvas-wrap { position: absolute; inset: 0; background: var(--bg); }
+.canvas-wrap { position: absolute; inset: 0; display: flex; background: var(--bg); }
+.canvas-stage { position: relative; flex: 1; min-width: 0; }
+
+/* ---------- design tree ---------- */
+.tree {
+  flex: 0 0 auto;
+  width: 288px;
+  display: flex; flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  z-index: 7;
+  transition: width .16s ease;
+}
+.tree.closed { width: 30px; }
+.tree-head {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 8px;
+  height: 31px; padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+.tree.closed .tree-head { justify-content: center; padding: 0; }
+.tree-rail-label {
+  margin: 12px auto 0;
+  writing-mode: vertical-rl;
+  font-size: 9px; letter-spacing: .18em;
+  color: var(--faint); user-select: none;
+}
+.tree-title {
+  font-size: 9.5px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); white-space: nowrap;
+}
+.tree-count { margin-left: auto; font-size: 9px; color: var(--faint); white-space: nowrap; }
+.tree.closed .tree-count { display: none; }
+.tree-toggle {
+  flex: 0 0 auto;
+  width: 22px; height: 22px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; color: var(--faint); cursor: pointer;
+}
+.tree-toggle:hover { background: var(--panel2); color: var(--text); }
+.tree-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 4px 0 8px;
+}
+.tree-body::-webkit-scrollbar { width: 7px; }
+.tree-body::-webkit-scrollbar-thumb { background: var(--border); }
+.tree-body::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+.tree-row {
+  display: flex; align-items: center; gap: 5px;
+  width: 100%; height: 21px; padding: 0 10px 0 8px;
+  border: 0; background: transparent;
+  color: var(--muted); font: inherit; font-size: 10.5px;
+  text-align: left; white-space: nowrap; overflow: hidden;
+  cursor: pointer;
+}
+.tree-row:hover { background: var(--panel2); color: var(--text); }
+.tree-row.active { background: var(--border); color: var(--text); }
+.tree-turn { color: var(--text); font-weight: 600; }
+.tree-caret-btn {
+  flex: 0 0 12px; width: 12px; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--faint);
+}
+.tree-caret { transition: transform .12s ease; }
+.tree-caret.open { transform: rotate(90deg); }
+.tree-ico { display: flex; flex: 0 0 auto; color: var(--c); }
+.tree-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tree-child { padding-left: 27px; }
+.tree-empty { padding: 8px 12px; font-size: 10.5px; color: var(--faint); }
 
 .canvas-toolbar {
   position: absolute; z-index: 5; top: 10px; left: 12px; right: 12px;
@@ -156,6 +226,16 @@ body {
 .tb-actions button + button { border-left: 1px solid var(--border); }
 .canvas-toolbar button:hover { background: var(--panel2); color: var(--text); }
 .canvas-toolbar button.on { color: var(--accent); }
+.tb-legend {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  height: 26px; padding: 0 10px;
+  background: var(--panel); border: 1px solid var(--border);
+  font-size: 9px; color: var(--faint); white-space: nowrap;
+}
+.tb-lg { display: inline-flex; align-items: center; gap: 4px; }
+.tb-lg i { width: 6px; height: 6px; background: var(--c); }
+@media (max-width: 1100px) { .tb-legend { display: none; } }
 .canvas-toolbar button:disabled { opacity: .5; cursor: default; }
 .hl-legend {
   display: inline-flex; align-items: center; gap: 5px;
@@ -250,12 +330,12 @@ body {
 }
 
 /* ---------- kind colors (mac terminal pro) ---------- */
-.ttnode.kind-send, .ttmini.kind-send { --c: #6871ff; }
-.ttnode.kind-context, .ttmini.kind-context { --c: #9a9a9a; }
-.ttnode.kind-model, .ttmini.kind-model { --c: #ca30c7; }
-.ttnode.kind-reason, .ttmini.kind-reason { --c: #ff77ff; }
-.ttnode.kind-tool, .ttmini.kind-tool { --c: #c7c400; }
-.ttnode.kind-answer, .ttmini.kind-answer { --c: #5ffa68; }
+.ttnode.kind-send, .ttmini.kind-send, .tree-row.kind-send, .tb-lg.kind-send { --c: #6871ff; }
+.ttnode.kind-context, .ttmini.kind-context, .tree-row.kind-context, .tb-lg.kind-context { --c: #9a9a9a; }
+.ttnode.kind-model, .ttmini.kind-model, .tree-row.kind-model, .tb-lg.kind-model { --c: #ca30c7; }
+.ttnode.kind-reason, .ttmini.kind-reason, .tree-row.kind-reason, .tb-lg.kind-reason { --c: #ff77ff; }
+.ttnode.kind-tool, .ttmini.kind-tool, .tree-row.kind-tool, .tb-lg.kind-tool { --c: #c7c400; }
+.ttnode.kind-answer, .ttmini.kind-answer, .tree-row.kind-answer, .tb-lg.kind-answer { --c: #5ffa68; }
 
 /* ---------- edges ---------- */
 .react-flow__edge-path { vector-effect: non-scaling-stroke; stroke-linecap: round; }

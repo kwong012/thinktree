@@ -12,6 +12,7 @@ import '@xyflow/react/dist/style.css';
 import NodeCard from './NodeCard.jsx';
 import FlowEdge from './FlowEdge.jsx';
 import TurnFrame from './TurnFrame.jsx';
+import DesignTree from './DesignTree.jsx';
 import { LodCtx, LangCtx, ExpandCtx } from './context.js';
 import { buildGraph, layoutGraph, NODE_SIZE, MIN_GAP } from '../layout.js';
 import { lodFor } from '../lod.js';
@@ -64,6 +65,7 @@ function Inner({ session, onRefresh, refreshing }) {
   const [showMini, setShowMini] = useState(true);
   const [framedTurn, setFramedTurn] = useState(null);
   const [frameRect, setFrameRect] = useState(null);
+  const [treeOpen, setTreeOpen] = useState(() => localStorage.getItem('tt-tree') !== '0');
   // 用户手动拖拽后的位置（跨实时刷新保留）
   const posRef = useRef(new Map());
   const [dragVersion, setDragVersion] = useState(0);
@@ -368,6 +370,25 @@ function Inner({ session, onRefresh, refreshing }) {
 
   const lastNode = computed.nodes[computed.nodes.length - 1];
 
+  const toggleTree = () => {
+    setTreeOpen((v) => {
+      localStorage.setItem('tt-tree', v ? '0' : '1');
+      return !v;
+    });
+  };
+
+  const jumpTo = (id) => {
+    if (!id) return;
+    const n = rf.getNode(id);
+    if (!n) return;
+    const w = n.measured?.width ?? n.width ?? n.style?.width ?? 240;
+    const h = n.measured?.height ?? n.height ?? n.style?.height ?? 100;
+    rf.setCenter(n.position.x + w / 2, n.position.y + h / 2, {
+      zoom: Math.max(rf.getZoom(), 0.9),
+      duration: 450,
+    });
+  };
+
   const centerLast = (zoom = 1, duration = 450) => {
     if (!lastNode) return;
     rf.setCenter(
@@ -417,10 +438,17 @@ function Inner({ session, onRefresh, refreshing }) {
       onPointerDownCapture={onMiniDown}
       onClickCapture={onMiniClick}
       onDoubleClick={(e) => {
-        if (e.target.closest?.('.drawer')) return;
+        if (e.target.closest?.('.drawer') || e.target.closest?.('.tree')) return;
         centerLast(1, 450);
       }}
     >
+      <DesignTree
+        session={session}
+        open={treeOpen}
+        onToggle={toggleTree}
+        onJump={jumpTo}
+      />
+      <div className="canvas-stage">
       <div className="canvas-toolbar">
         <div className="tb-group">
           <span className="lod-pill" data-lod={lod}>
@@ -435,6 +463,14 @@ function Inner({ session, onRefresh, refreshing }) {
           <span className="hl-legend">
             <i /> {t(lang, 'ctxLegend')}
           </span>
+        </div>
+        <div className="tb-legend">
+          {['send', 'context', 'model', 'reason', 'tool', 'answer'].map((k) => (
+            <span key={k} className={`tb-lg kind-${k}`}>
+              <i />
+              {t(lang, `kind.${k}`)}
+            </span>
+          ))}
         </div>
         <div className="spacer" />
         <div className="tb-actions">
@@ -506,6 +542,7 @@ function Inner({ session, onRefresh, refreshing }) {
           </ReactFlow>
         </LodCtx.Provider>
       </ExpandCtx.Provider>
+      </div>
     </div>
   );
 }

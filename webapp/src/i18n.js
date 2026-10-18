@@ -56,6 +56,9 @@ const DICT = {
     refresh: '刷新',
     follow: '跟随最新',
     hideMap: '隐藏地图',
+    designTree: '轨迹',
+    hideTree: '收起轨迹',
+    showTree: '展开轨迹',
     kind: {
       send: '发送',
       context: '上下文',
@@ -120,6 +123,9 @@ const DICT = {
     refresh: 'Refresh',
     follow: 'Follow latest',
     hideMap: 'Hide map',
+    designTree: 'Trace',
+    hideTree: 'Collapse trace',
+    showTree: 'Expand trace',
     kind: {
       send: 'Prompt',
       context: 'Context',
