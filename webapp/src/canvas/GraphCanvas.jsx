@@ -530,6 +530,7 @@ function Inner({ session, onRefresh, refreshing }) {
             <Controls showInteractive={false} />
             {showMini ? (
               <MiniMap
+                position="bottom-right"
                 pannable
                 zoomable
                 className="tt-minimap"
