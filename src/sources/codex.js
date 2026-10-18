@@ -21,6 +21,7 @@ import {
   dirName,
   shortId,
   pickLive,
+  preferCwd,
 } from './util.js';
 
 const ROOT = process.env.CODEX_SESSION_DIR || join(homedir(), '.codex', 'sessions');
@@ -30,7 +31,7 @@ const ALIVE_WINDOW = 30 * 60_000;
 let cache = { at: 0, list: [], byId: new Map() };
 
 function scan() {
-  if (Date.now() - cache.at < 1500) return cache;
+  if (Date.now() - cache.at < 300) return cache;
   const list = [];
   const byId = new Map();
   for (const path of walkFiles(ROOT, (p) => /rollout-.*\.jsonl$/i.test(p))) {
@@ -68,7 +69,9 @@ export function createCodexSource() {
 
     listLive(procSnapshot) {
       const { list } = scan();
-      return pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
+      const live = pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
+      live.sessions = preferCwd(live.sessions, live.processes);
+      return live;
     },
 
     getSession(id) {

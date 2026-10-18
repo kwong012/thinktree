@@ -4,7 +4,7 @@
  * 记录类型：session / model_change / message(role=user|assistant|toolResult|system)
  * assistant.message.content 内含 thinking / text / toolCall，并带 usage。
  */
-import { existsSync } from 'node:fs';
+import { existsSync, openSync, readSync, closeSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import {
@@ -26,6 +26,7 @@ import {
   dirName,
   shortId,
   pickLive,
+  preferCwd,
 } from './util.js';
 
 const ROOT = process.env.PI_SESSION_DIR || join(homedir(), '.pi', 'agent', 'sessions');
@@ -33,22 +34,49 @@ const PATTERNS = [/^pi(\.exe)?$/i, /pi-launcher\.js/i, /pi-coding-agent/i];
 const ALIVE_WINDOW = 30 * 60_000;
 
 let cache = { at: 0, list: [], byId: new Map() };
+const titleCache = new Map();
+
+/** 用首条用户消息作为标题（只读文件头部 256KB）。 */
+function firstUserText(path) {
+  try {
+    const fd = openSync(path, 'r');
+    const buf = Buffer.alloc(256 * 1024);
+    const n = readSync(fd, buf, 0, buf.length, 0);
+    closeSync(fd);
+    for (const line of buf.subarray(0, n).toString('utf8').split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      let row;
+      try { row = JSON.parse(line); } catch { continue; }
+      if (row.type === 'message' && row.message?.role === 'user') {
+        const t = contentText(row.message.content).replace(/\s+/g, ' ').trim();
+        if (t) return t.slice(0, 90);
+      }
+    }
+  } catch {}
+  return '';
+}
 
 function scan() {
-  if (Date.now() - cache.at < 1500) return cache;
+  if (Date.now() - cache.at < 300) return cache;
   const list = [];
   const byId = new Map();
   for (const path of walkFiles(ROOT, (p) => p.endsWith('.jsonl'))) {
     const head = safeJson(readFirstLine(path), {});
     if (head.type !== 'session' || !head.id) continue;
+    const stamp = mtime(path);
+    let cached = titleCache.get(path);
+    if (!cached || cached.stamp !== stamp) {
+      cached = { stamp, title: firstUserText(path) || dirName(head.cwd) || head.id };
+      titleCache.set(path, cached);
+    }
     const item = {
       id: head.id,
-      title: dirName(head.cwd) || head.id,
+      title: cached.title,
       agent: 'pi',
       model: {},
       directory: head.cwd,
       createdAt: timeMs(head.timestamp),
-      updatedAt: mtime(path),
+      updatedAt: stamp,
       path,
     };
     list.push(item);
@@ -70,7 +98,9 @@ export function createPiSource() {
 
     listLive(procSnapshot) {
       const { list } = scan();
-      return pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
+      const live = pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
+      live.sessions = preferCwd(live.sessions, live.processes);
+      return live;
     },
 
     getSession(id) {

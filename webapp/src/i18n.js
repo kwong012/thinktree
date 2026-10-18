@@ -53,6 +53,8 @@ const DICT = {
     ctxLegend: '高亮 · 上下文检索',
     map: '小地图',
     turnFrame: '第 {n} 轮 · 问答',
+    refresh: '刷新',
+    follow: '跟随最新',
     hideMap: '隐藏地图',
     kind: {
       send: '发送',
@@ -115,6 +117,8 @@ const DICT = {
     ctxLegend: 'Highlight · context retrieval',
     map: 'Map',
     turnFrame: 'Turn {n} · Q&A',
+    refresh: 'Refresh',
+    follow: 'Follow latest',
     hideMap: 'Hide map',
     kind: {
       send: 'Prompt',

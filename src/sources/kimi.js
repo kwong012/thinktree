@@ -18,6 +18,7 @@ import {
   dirName,
   shortId,
   pickLive,
+  preferCwd,
 } from './util.js';
 
 const ROOT = process.env.KIMI_CODE_HOME || join(homedir(), '.kimi-code');
@@ -38,7 +39,7 @@ function loadWorkDirs() {
 }
 
 function scan() {
-  if (Date.now() - cache.at < 1500) return cache;
+  if (Date.now() - cache.at < 300) return cache;
   const workDirs = loadWorkDirs();
   const list = [];
   const byId = new Map();
@@ -101,7 +102,9 @@ export function createKimiSource() {
 
     listLive(procSnapshot) {
       const { list } = scan();
-      return pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
+      const live = pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
+      live.sessions = preferCwd(live.sessions, live.processes);
+      return live;
     },
 
     getSession(id) {

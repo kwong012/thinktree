@@ -14,6 +14,8 @@ export default function App() {
   const [sessions, setSessions] = useState({});
   const [activeSource, setActiveSource] = useState(null);
   const [activeId, setActiveId] = useState(null);
+  const [manual, setManual] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState('connecting');
 
   useEffect(() => {
@@ -76,10 +78,19 @@ export default function App() {
       setActiveId(null);
       return;
     }
-    if (activeAgent.sourceId !== activeSource) setActiveSource(activeAgent.sourceId);
+    if (activeAgent.sourceId !== activeSource) {
+      setActiveSource(activeAgent.sourceId);
+      setManual(false);
+    }
     const ids = (activeAgent.sessions || []).map((s) => s.id);
-    if (!ids.includes(activeId)) setActiveId(ids[0] || null);
-  }, [activeAgent, activeSource, activeId]);
+    if (!ids.length) {
+      setActiveId(null);
+      return;
+    }
+    // 默认跟随最新活动会话；用户手动点选后保持。
+    if (manual && ids.includes(activeId)) return;
+    if (activeId !== ids[0]) setActiveId(ids[0]);
+  }, [activeAgent, activeSource, activeId, manual]);
 
   const key = activeAgent && activeId ? `${activeAgent.sourceId}:${activeId}` : null;
   const session = key ? sessions[key] : null;
@@ -100,6 +111,32 @@ export default function App() {
     };
   }, [activeAgent, activeId, sessions]);
 
+  // 刷新：重新探测存活 agent / 会话，并回到最新活动会话。
+  const refresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const snap = await fetchAgents();
+      setAgents(snap.agents || []);
+      setFocused(snap.focused || null);
+
+      const src = activeSource || snap.agents?.[0]?.sourceId;
+      const agent = (snap.agents || []).find((a) => a.sourceId === src);
+      const latest = agent?.sessions?.[0];
+      if (agent && latest) {
+        const sess = await fetchSession(agent.sourceId, latest.id);
+        setSessions((prev) => ({ ...prev, [`${sess.sourceId}:${sess.id}`]: sess }));
+        setActiveSource(agent.sourceId);
+        setActiveId(latest.id);
+        setManual(false);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <LangCtx.Provider value={lang}>
       <div className="app">
@@ -119,6 +156,21 @@ export default function App() {
               {t(lang, 'foreground')}: {focused.name}
             </span>
           ) : null}
+          <button
+            className="iconbtn"
+            onClick={refresh}
+            disabled={refreshing}
+            title={t(lang, 'refresh')}
+          >
+            <svg
+              className="ticon"
+              viewBox="0 0 12 12"
+              style={{ animation: refreshing ? 'tt-spin 0.9s linear infinite' : undefined }}
+            >
+              <path d="M9.7 4.4A4 4 0 1 0 10 7.2" />
+              <path d="M9.9 1.8v2.9H7" />
+            </svg>
+          </button>
           <button
             className="iconbtn"
             onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
@@ -155,12 +207,27 @@ export default function App() {
               <button
                 key={s.id}
                 className={`pill${s.id === activeId ? ' on' : ''}`}
-                onClick={() => setActiveId(s.id)}
+                onClick={() => {
+                  setManual(true);
+                  setActiveId(s.id);
+                }}
                 title={s.title}
               >
                 {s.title || s.id}
               </button>
             ))}
+            {manual ? (
+              <button
+                className="pill follow"
+                onClick={() => {
+                  setManual(false);
+                  setActiveId(activeAgent.sessions?.[0]?.id || null);
+                }}
+                title={t(lang, 'follow')}
+              >
+                {t(lang, 'follow')}
+              </button>
+            ) : null}
             <div className="spacer" />
             {session ? (
               <span className="meta">

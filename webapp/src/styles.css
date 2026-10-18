@@ -33,7 +33,7 @@ html, body, #root { height: 100%; margin: 0; }
 body {
   background: var(--bg);
   color: var(--text);
-  font: 12.5px/1.45 "Segoe UI", -apple-system, "Microsoft YaHei", sans-serif;
+  font: 13px/1.45 "IBM Plex Sans Condensed", "Segoe UI", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
@@ -157,7 +157,7 @@ body {
   padding: 7px 9px;
   background: var(--node-bg);
   border: 0;
-  border-top: 2px solid var(--c);
+  border-left: 3px solid var(--c);
   overflow: hidden;
 }
 .ttnode:hover { background: var(--node-hover); }
@@ -184,7 +184,7 @@ body {
 .ttdim { color: var(--faint); }
 .ttpre {
   margin: 0 0 3px; padding: 3px 5px;
-  font: 9px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font: 9px/1.45 "IBM Plex Mono", ui-monospace, Consolas, monospace;
   color: var(--pre-text); background: var(--pre-bg);
   max-height: 34px; overflow: hidden; white-space: pre-wrap; word-break: break-all;
 }
@@ -214,15 +214,15 @@ body {
   width: 100%; height: 100%;
   display: flex; align-items: center; gap: 4px;
   padding: 0 5px;
-  background: color-mix(in srgb, var(--c) 20%, var(--node-bg));
+  background: var(--c);
   border: 0;
-  border-top: 3px solid var(--c);
+  color: #0a0b0d;
   overflow: hidden;
   font-size: 8.5px;
 }
 .ttminidot { display: none; }
-.ttminikind { color: var(--text); opacity: .55; white-space: nowrap; font-size: 8px; letter-spacing: .06em; text-transform: uppercase; }
-.ttminititle { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ttminikind { color: rgba(0, 0, 0, .55); white-space: nowrap; font-size: 8px; letter-spacing: .06em; text-transform: uppercase; }
+.ttminititle { color: #0a0b0d; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .react-flow__handle.tt-handle {
   width: 1px; height: 1px; min-width: 1px; min-height: 1px;
@@ -230,12 +230,12 @@ body {
 }
 
 /* ---------- kind colors (muted) ---------- */
-.ttnode.kind-send, .ttmini.kind-send { --c: #6b9bd1; }
-.ttnode.kind-context, .ttmini.kind-context { --c: #a0a4ac; }
-.ttnode.kind-model, .ttmini.kind-model { --c: #a08bd6; }
-.ttnode.kind-reason, .ttmini.kind-reason { --c: #c0a0e0; }
-.ttnode.kind-tool, .ttmini.kind-tool { --c: #d9a441; }
-.ttnode.kind-answer, .ttmini.kind-answer { --c: #6fbf8f; }
+.ttnode.kind-send, .ttmini.kind-send { --c: #6ea8fe; }
+.ttnode.kind-context, .ttmini.kind-context { --c: #b9bec7; }
+.ttnode.kind-model, .ttmini.kind-model { --c: #b49cff; }
+.ttnode.kind-reason, .ttmini.kind-reason { --c: #d4b5ff; }
+.ttnode.kind-tool, .ttmini.kind-tool { --c: #f0b84a; }
+.ttnode.kind-answer, .ttmini.kind-answer { --c: #6fd39a; }
 
 /* ---------- edges ---------- */
 .react-flow__edge-path { vector-effect: non-scaling-stroke; stroke-linecap: round; }
@@ -297,7 +297,7 @@ body {
 .ttfull .dval { color: var(--text); word-break: break-word; }
 .ttfull .dsec { margin: 8px 0 3px; font-size: 8.5px; color: var(--faint); text-transform: uppercase; letter-spacing: .1em; }
 .ttfull .dpre {
-  margin: 0; font: 10px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  margin: 0; font: 10px/1.55 "IBM Plex Mono", ui-monospace, Consolas, monospace;
   color: var(--pre-text); background: var(--pre-bg);
   padding: 7px 8px;
   white-space: pre-wrap; word-break: break-word;
@@ -332,3 +332,7 @@ body {
 }
 .react-flow__minimap.tt-minimap svg { display: block; }
 .react-flow__minimap-mask { fill: var(--minimap-mask); }
+
+@keyframes tt-spin { to { transform: rotate(360deg); } }
+.iconbtn:disabled { opacity: .5; cursor: default; }
+.pill.follow { color: var(--accent); }

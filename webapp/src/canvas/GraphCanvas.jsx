@@ -24,12 +24,12 @@ const LOD_KEY = { far: 'lodFar', mid: 'lodMid', near: 'lodNear' };
 const EXPANDED_W = 520;
 
 const MINI_COLOR = {
-  send: '#5b7fa6',
-  context: '#8a8d94',
-  model: '#7d6ea8',
-  reason: '#9a86b8',
-  tool: '#b0853f',
-  answer: '#5f8f74',
+  send: '#6ea8fe',
+  context: '#b9bec7',
+  model: '#b49cff',
+  reason: '#d4b5ff',
+  tool: '#f0b84a',
+  answer: '#6fd39a',
 };
 
 function estimateExpandedHeight(data) {

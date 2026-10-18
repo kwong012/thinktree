@@ -15,9 +15,20 @@ export function pickLive(procSnapshot, patterns, sessions, opts = {}) {
   const newest = sessions[0]?.updatedAt || 0;
   const recent = newest > 0 && now - newest <= recentWindow;
   if (!processes.length && !recent) return { processes: [], sessions: [] };
+
+  const ordered = preferCwd(sessions, processes);
+  const norm = (v) => String(v || '').replace(/[\\/]+$/, '').replace(/\//g, '\\').toLowerCase();
+  const cwds = new Set(processes.map((p) => norm(p.cwd)).filter(Boolean));
+  const matched = new Set(ordered.filter((s) => cwds.has(norm(s.directory))).map((s) => s.id));
+
+  // CLI/TUI：能按 cwd 定位时，只显示当前会话，不再列出历史会话。
+  if (matched.size) return { processes, sessions: [ordered[0]] };
+
   return {
     processes,
-    sessions: sessions.filter((s, i) => i === 0 || now - s.updatedAt <= aliveWindow),
+    sessions: ordered.filter(
+      (s, i) => i === 0 || matched.has(s.id) || now - s.updatedAt <= aliveWindow,
+    ),
   };
 }
 
@@ -143,4 +154,17 @@ export function dirName(p) {
 
 export function shortId(id) {
   return String(id).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+}
+
+/**
+ * CLI/TUI 优先：把与进程 cwd 匹配的会话排到最前（桌面端不调用）。
+ */
+export function preferCwd(sessions, processes) {
+  const norm = (v) => String(v || '').replace(/[\\/]+$/, '').replace(/\//g, '\\').toLowerCase();
+  const cwds = new Set((processes || []).map((p) => norm(p.cwd)).filter(Boolean));
+  if (!cwds.size) return sessions;
+  const match = sessions.filter((s) => cwds.has(norm(s.directory)));
+  if (!match.length) return sessions;
+  const ids = new Set(match.map((s) => s.id));
+  return [...match, ...sessions.filter((s) => !ids.has(s.id))];
 }

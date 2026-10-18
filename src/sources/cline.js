@@ -29,7 +29,7 @@ const ALIVE_WINDOW = 30 * 60_000;
 let cache = { at: 0, list: [], byId: new Map() };
 
 function scan() {
-  if (Date.now() - cache.at < 1500) return cache;
+  if (Date.now() - cache.at < 300) return cache;
   const list = [];
   const byId = new Map();
 

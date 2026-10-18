@@ -26,6 +26,55 @@ public static class TTWin32 {
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
 }
 "@
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public static class TTProcCwd {
+  [StructLayout(LayoutKind.Sequential)]
+  struct PBI {
+    public IntPtr Reserved1;
+    public IntPtr PebBaseAddress;
+    public IntPtr R2a;
+    public IntPtr R2b;
+    public IntPtr UniqueProcessId;
+    public IntPtr R3;
+  }
+  [DllImport("ntdll.dll")]
+  static extern int NtQueryInformationProcess(IntPtr h, int cls, ref PBI pbi, int len, out int ret);
+  [DllImport("kernel32.dll", SetLastError = true)]
+  static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+  [DllImport("kernel32.dll", SetLastError = true)]
+  static extern bool ReadProcessMemory(IntPtr h, IntPtr addr, byte[] buf, int size, out IntPtr read);
+  [DllImport("kernel32.dll")]
+  static extern bool CloseHandle(IntPtr h);
+
+  public static string Get(int pid) {
+    IntPtr h = OpenProcess(0x0410, false, pid);
+    if (h == IntPtr.Zero) return null;
+    try {
+      PBI pbi = new PBI();
+      int ret;
+      if (NtQueryInformationProcess(h, 0, ref pbi, Marshal.SizeOf(pbi), out ret) != 0) return null;
+      byte[] buf = new byte[8];
+      IntPtr read;
+      if (!ReadProcessMemory(h, (IntPtr)((long)pbi.PebBaseAddress + 0x20), buf, 8, out read)) return null;
+      long pp = BitConverter.ToInt64(buf, 0);
+      if (pp == 0) return null;
+      byte[] us = new byte[16];
+      if (!ReadProcessMemory(h, (IntPtr)(pp + 0x38), us, 16, out read)) return null;
+      ushort len = BitConverter.ToUInt16(us, 0);
+      long bufPtr = BitConverter.ToInt64(us, 8);
+      if (len == 0 || len > 4096 || bufPtr == 0) return null;
+      byte[] str = new byte[len];
+      if (!ReadProcessMemory(h, (IntPtr)bufPtr, str, len, out read)) return null;
+      return Encoding.Unicode.GetString(str);
+    } finally {
+      CloseHandle(h);
+    }
+  }
+}
+"@
 while ($true) {
   $fg = [TTWin32]::GetForegroundWindow()
   $fpid = [uint32]0
@@ -39,7 +88,14 @@ while ($true) {
     Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='python.exe' OR Name='pythonw.exe' OR Name='bun.exe' OR Name='deno.exe'" |
       ForEach-Object { $cmds[[int]$_.ProcessId] = $_.CommandLine }
   } catch {}
-  $procs = @(Get-Process -ErrorAction SilentlyContinue | ForEach-Object { @{ pid = $_.Id; name = $_.ProcessName; cmd = $cmds[[int]$_.Id] } })
+  $procs = @(Get-Process -ErrorAction SilentlyContinue | ForEach-Object {
+    $procId = [int]$_.Id
+    $procName = $_.ProcessName
+    $cwd = $null
+    $needCwd = $cmds.ContainsKey($procId) -or ($procName -match '^(opencode|pi|codex|kimi|zcode)')
+    if ($needCwd) { try { $cwd = [TTProcCwd]::Get($procId) } catch {} }
+    @{ pid = $_.Id; name = $procName; cmd = $cmds[$procId]; cwd = $cwd }
+  })
   $obj = @{ focused = @{ pid = [int]$fpid; name = $fname; title = $sb.ToString() }; processes = $procs }
   $json = $obj | ConvertTo-Json -Depth 4 -Compress
   [Console]::Out.WriteLine([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json)))
@@ -79,7 +135,7 @@ export function createProcMonitor() {
           const obj = JSON.parse(Buffer.from(line, 'base64').toString('utf8'));
           snapshot = {
             focused: obj.focused?.name ? obj.focused : null,
-            processes: (obj.processes || []).map((p) => ({ pid: p.pid, name: p.name, cmd: p.cmd })),
+            processes: (obj.processes || []).map((p) => ({ pid: p.pid, name: p.name, cmd: p.cmd, cwd: p.cwd })),
             at: Date.now(),
           };
         } catch {

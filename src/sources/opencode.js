@@ -8,7 +8,7 @@
  */
 import { createOpencodeAdapter } from '../adapters/opencode.js';
 import { mcpServerNames } from '../adapters/opencode-config.js';
-import { pickLive } from './util.js';
+import { pickLive, preferCwd } from './util.js';
 
 const PROCESS_PATTERNS = [/^opencode/i];
 
@@ -26,7 +26,9 @@ export function createOpencodeSource({ aliveWindowMs = 30 * 60_000 } = {}) {
 
     listLive(procSnapshot) {
       const all = adapter.listSessions({ limit: 100 });
-      return pickLive(procSnapshot, PROCESS_PATTERNS, all, { aliveWindow: aliveWindowMs });
+      const live = pickLive(procSnapshot, PROCESS_PATTERNS, all, { aliveWindow: aliveWindowMs });
+      live.sessions = preferCwd(live.sessions, live.processes);
+      return live;
     },
 
     getSession: adapter.getSession,
