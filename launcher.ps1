@@ -2,7 +2,7 @@
 
 $ErrorActionPreference = 'Stop'
 $Root = $PSScriptRoot
-$Port = 5517
+$Port = 9178
 $Url = "http://localhost:$Port"
 $LogDir = Join-Path $Root 'logs'
 $OutLog = Join-Path $LogDir 'server.out.log'

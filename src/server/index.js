@@ -19,7 +19,7 @@ import { createRegistry } from '../registry.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
 const WEB_DIST = join(ROOT, 'src', 'web', 'dist');
-const PORT = Number(process.env.PORT) || 5517;
+const PORT = Number(process.env.PORT) || 9178;
 
 const registry = createRegistry();
 
