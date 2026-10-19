@@ -32,15 +32,21 @@ thinktree/
 │       ├── lod.js               zoom → LOD
 │       ├── i18n.js              中英词典
 │       ├── styles.css           主题变量与全部样式
-│       └── canvas/
-│           ├── GraphCanvas.jsx  画布外壳：工具栏、展开、物理模式、轨迹开关
-│           ├── CanvasStage.jsx  Canvas 2D 渲染器：节点/边/视口裁剪/小地图/交互
-│           ├── NodeDetail.jsx   展开详情（单个 DOM 覆盖层）
-│           ├── DesignTree.jsx   左侧轨迹树
-│           ├── KindIcon.jsx     自绘极简 SVG 图标
-│           ├── physics.js       局部唤醒碰撞求解（return / stay）
-│           └── context.js       LOD / 语言 / 展开上下文
-└── workfile-temp/               临时文件（git 忽略）
+│       ├── canvas/
+│       │   ├── GraphCanvas.jsx  画布外壳：工具栏、展开、物理模式、轨迹开关
+│       │   ├── CanvasStage.jsx  Canvas 2D 渲染器：节点/边/视口裁剪/小地图/交互
+│       │   ├── NodeDetail.jsx   展开详情（单个 DOM 覆盖层）
+│       │   ├── DesignTree.jsx   左侧轨迹树
+│       │   ├── KindIcon.jsx     自绘极简 SVG 图标
+│       │   ├── physics.js       局部唤醒碰撞求解（return / stay）
+│       │   └── context.js       LOD / 语言 / 展开上下文
+│       └── dashboard/
+│           ├── Dashboard.jsx    右侧抽屉：范围、KPI、图表、会话表
+│           ├── metrics.js       usage / 缓存 / 上下文 / 热力图聚合
+│           ├── options.js       ECharts 图表配置
+│           ├── EChart.jsx       ECharts 实例、resize、dispose
+│           └── dashboard.css    Dashboard 样式
+├── workfile-temp/               临时文件（git 忽略）
 ```
 
 ## 2. Source 接口
@@ -83,6 +89,7 @@ thinktree/
 | 性能：7200 节点 / 7998 连线压测（p95 约 12–18ms） | ✅ |
 | 深/浅主题 + 中英切换 + SVG 图标 | ✅ |
 | `thinkTREE` 品牌字标 | ✅ |
+| Dashboard：agent 全活会话聚合 + 缓存/上下文/token + 24h/7d/30d 热力图 | ✅ |
 | 提交规范（每次改动即提交） | ✅（见 AGENTS.md） |
 
 ## 4. 后续可选
