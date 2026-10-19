@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import GraphCanvas from './canvas/GraphCanvas.jsx';
 import { LangCtx } from './canvas/context.js';
 import { fetchAgents, fetchSession, openStream } from './api.js';
 import { t } from './i18n.js';
+
+const Dashboard = lazy(() => import('./dashboard/Dashboard.jsx'));
 
 const IFACE_LABEL = { 'cli/tui': 'CLI/TUI', cli: 'CLI', tui: 'TUI', desktop: 'Desktop' };
 
@@ -17,6 +19,13 @@ export default function App() {
   const [picked, setPicked] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState('connecting');
+  const [dashOpen, setDashOpen] = useState(false);
+  const [dashLoaded, setDashLoaded] = useState(false);
+  const dashLoading = useRef(new Set());
+
+  useEffect(() => {
+    if (dashOpen) setDashLoaded(true);
+  }, [dashOpen]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = 'dark';
@@ -97,6 +106,34 @@ export default function App() {
 
   const key = activeAgent && activeId ? `${activeAgent.sourceId}:${activeId}` : null;
   const session = key ? sessions[key] : null;
+
+  const agentSessions = useMemo(() => {
+    if (!activeAgent) return [];
+    return (activeAgent.sessions || [])
+      .map((s) => sessions[`${activeAgent.sourceId}:${s.id}`])
+      .filter(Boolean);
+  }, [activeAgent, sessions]);
+
+  useEffect(() => {
+    if (!dashOpen || !activeAgent) return;
+    const sourceId = activeAgent.sourceId;
+    const missing = (activeAgent.sessions || [])
+      .filter((s) => !sessions[`${sourceId}:${s.id}`])
+      .slice(0, 8);
+    for (const item of missing) {
+      const cacheKey = `${sourceId}:${item.id}`;
+      if (dashLoading.current.has(cacheKey)) continue;
+      dashLoading.current.add(cacheKey);
+      fetchSession(sourceId, item.id)
+        .then((sess) => {
+          setSessions((prev) => ({ ...prev, [`${sess.sourceId}:${sess.id}`]: sess }));
+          dashLoading.current.delete(cacheKey);
+        })
+        .catch(() => {
+          setTimeout(() => dashLoading.current.delete(cacheKey), 30000);
+        });
+    }
+  }, [dashOpen, activeAgent, sessions]);
 
   useEffect(() => {
     if (!activeAgent || !activeId) return;
@@ -195,6 +232,25 @@ export default function App() {
           ) : null}
           <div className="hdr-actions">
             <button
+              className={`iconbtn dash-toggle${dashOpen ? ' on' : ''}`}
+              onClick={() => setDashOpen((v) => !v)}
+              disabled={!activeAgent}
+              aria-expanded={dashOpen}
+              aria-controls="dashboard-panel"
+              title={t(lang, 'dashboard')}
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+                <path
+                  d="M2 13V7M6 13V3M10 13V6M14 13V9"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span>{t(lang, 'dashboard')}</span>
+            </button>
+            <button
               className="iconbtn"
               onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
               title="中文 / English"
@@ -280,6 +336,23 @@ export default function App() {
               </div>
             </div>
           )}
+          {activeAgent && dashLoaded ? (
+            <Suspense fallback={dashOpen ? <div className="dash-loading">{t(lang, 'loading')}</div> : null}>
+              <Dashboard
+                open={dashOpen}
+                onClose={() => setDashOpen(false)}
+                agent={activeAgent}
+                sessions={agentSessions}
+                totalSessions={activeAgent.sessions?.length || 0}
+                currentSession={session}
+                lang={lang}
+                onSelectSession={(id) => {
+                  setPicked((prev) => ({ ...prev, [activeAgent.sourceId]: id }));
+                  setActiveId(id);
+                }}
+              />
+            </Suspense>
+          ) : null}
         </main>
       </div>
     </LangCtx.Provider>

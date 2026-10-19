@@ -545,3 +545,7 @@ body {
 @keyframes tt-spin { to { transform: rotate(360deg); } }
 .iconbtn:disabled { opacity: .5; cursor: default; }
 .pill.follow { color: var(--accent); }
+
+.dash-toggle { display: inline-flex; align-items: center; gap: 5px; }
+.dash-toggle svg { display: block; }
+.dash-toggle.on { background: var(--border); color: var(--text); }
