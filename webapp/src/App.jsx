@@ -32,9 +32,7 @@ export default function App() {
   const dashPrefetchRef = useRef({ sourceId: '', keys: new Set() });
   const tabsRef = useRef(null);
   const lastActiveRef = useRef(null);
-  const sessionMenuRef = useRef(null);
   const [tabIndicator, setTabIndicator] = useState({ x: 0, w: 0, ready: false });
-  const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
 
   useEffect(() => {
     if (dashOpen) setDashLoaded(true);
@@ -152,35 +150,6 @@ export default function App() {
     () => (activeAgent?.sessions || []).find((s) => s.id === activeId) || null,
     [activeAgent, activeId],
   );
-
-  useEffect(() => {
-    setSessionMenuOpen(false);
-  }, [activeAgent?.sourceId, activeId]);
-
-  useEffect(() => {
-    if (!sessionMenuOpen) return undefined;
-    const onDown = (e) => {
-      if (sessionMenuRef.current && !sessionMenuRef.current.contains(e.target)) {
-        setSessionMenuOpen(false);
-      }
-    };
-    const onKey = (e) => {
-      if (e.key === 'Escape') setSessionMenuOpen(false);
-    };
-    document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [sessionMenuOpen]);
-
-  useLayoutEffect(() => {
-    if (!sessionMenuOpen) return;
-    sessionMenuRef.current
-      ?.querySelector('.session-option.on')
-      ?.scrollIntoView({ block: 'nearest' });
-  }, [sessionMenuOpen]);
 
   const agentSessions = useMemo(() => {
     if (!activeAgent) return [];
@@ -376,68 +345,12 @@ export default function App() {
 
         {activeAgent ? (
           <div className="sessionbar">
-            <div className="session-select" ref={sessionMenuRef}>
-              <button
-                type="button"
-                className={`session-trigger${sessionMenuOpen ? ' open' : ''}`}
-                onClick={() => setSessionMenuOpen((v) => !v)}
-                aria-haspopup="listbox"
-                aria-expanded={sessionMenuOpen}
-                aria-label={t(lang, 'selectSession')}
-                title={activeSessionMeta?.title || activeId || ''}
-              >
-                <span className="session-trigger-title">
-                  {activeSessionMeta?.title || session?.title || activeId || t(lang, 'selectSession')}
-                </span>
-                <span className="session-trigger-count">{activeAgent.sessions?.length || 0}</span>
-                <svg className="session-caret" viewBox="0 0 10 6" width="10" height="6" aria-hidden="true">
-                  <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.3" />
-                </svg>
-              </button>
-              {sessionMenuOpen ? (
-                <div className="session-menu" role="listbox" aria-label={t(lang, 'selectSession')}>
-                  {(activeAgent.sessions || []).map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      role="option"
-                      aria-selected={s.id === activeId}
-                      className={`session-option${s.id === activeId ? ' on' : ''}`}
-                      onClick={() => {
-                        setPicked((prev) => ({ ...prev, [activeAgent.sourceId]: s.id }));
-                        setActiveId(s.id);
-                        setSessionMenuOpen(false);
-                      }}
-                      title={s.title}
-                    >
-                      <span className="session-option-title">{s.title || s.id}</span>
-                      {s.updatedAt ? (
-                        <span className="session-option-time">{formatSessionTime(s.updatedAt)}</span>
-                      ) : null}
-                    </button>
-                  ))}
-                  {!activeAgent.sessions?.length ? (
-                    <div className="session-empty">{t(lang, 'noSessions')}</div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-            {picked[activeAgent.sourceId] ? (
-              <button
-                className="pill follow"
-                onClick={() => {
-                  setPicked((prev) => {
-                    const next = { ...prev };
-                    delete next[activeAgent.sourceId];
-                    return next;
-                  });
-                  setActiveId(activeAgent.sessions?.[0]?.id || null);
-                }}
-                title={t(lang, 'follow')}
-              >
-                {t(lang, 'follow')}
-              </button>
-            ) : null}
+            <span
+              className="session-current"
+              title={activeSessionMeta?.title || session?.title || activeId || ''}
+            >
+              {activeSessionMeta?.title || session?.title || activeId || t(lang, 'loading')}
+            </span>
             <div className="spacer" />
             {session ? (
               <span className="meta">
@@ -484,12 +397,3 @@ export default function App() {
   );
 }
 
-function formatSessionTime(ms) {
-  try {
-    const d = new Date(ms);
-    const p = (n) => String(n).padStart(2, '0');
-    return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-  } catch {
-    return '';
-  }
-}
