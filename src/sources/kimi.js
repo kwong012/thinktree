@@ -72,7 +72,7 @@ function scan() {
         model: {},
         directory: workDirs.get(id) || '',
         createdAt: state.createdAt || 0,
-        updatedAt: state.updatedAt || mtime(wire),
+        updatedAt: Math.max(state.updatedAt || 0, mtime(wire)),
         path: wire,
       };
       list.push(item);

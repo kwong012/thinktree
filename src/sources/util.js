@@ -18,17 +18,32 @@ export function pickLive(procSnapshot, patterns, sessions, opts = {}) {
 
   const ordered = preferCwd(sessions, processes);
   const norm = (v) => String(v || '').replace(/[\\/]+$/, '').replace(/\//g, '\\').toLowerCase();
-  const cwds = new Set(processes.map((p) => norm(p.cwd)).filter(Boolean));
-  const matched = new Set(ordered.filter((s) => cwds.has(norm(s.directory))).map((s) => s.id));
+  const allCwds = new Set(processes.map((p) => norm(p.cwd)).filter(Boolean));
+  const focusedPid = procSnapshot?.focused?.pid;
+  const focusedProc = focusedPid ? processes.find((p) => p.pid === focusedPid) : null;
+  const focusedCwd = focusedProc ? norm(focusedProc.cwd) : '';
 
-  // CLI/TUI：能按 cwd 定位时，只显示当前会话，不再列出历史会话。
-  if (matched.size) return { processes, sessions: [ordered[0]] };
+  const latestPerCwd = (dirs) => {
+    const byDir = new Map();
+    for (const s of ordered) {
+      const dir = norm(s.directory);
+      if (!dirs.has(dir)) continue;
+      const prev = byDir.get(dir);
+      if (!prev || (s.updatedAt || 0) > (prev.updatedAt || 0)) byDir.set(dir, s);
+    }
+    return [...byDir.values()].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  };
+
+  // 聚焦进程的 cwd 优先；没有聚焦时合并该 agent 所有存活进程的 cwd。
+  // 每个 cwd 只取最新会话，代表该存活进程当前会话，不展开历史。
+  let matched = focusedCwd ? latestPerCwd(new Set([focusedCwd])) : latestPerCwd(allCwds);
+  if (!matched.length && focusedCwd && allCwds.size) matched = latestPerCwd(allCwds);
+
+  if (matched.length) return { processes, sessions: matched };
 
   return {
     processes,
-    sessions: ordered.filter(
-      (s, i) => i === 0 || matched.has(s.id) || now - s.updatedAt <= aliveWindow,
-    ),
+    sessions: ordered.filter((s, i) => i === 0 || now - s.updatedAt <= aliveWindow),
   };
 }
 

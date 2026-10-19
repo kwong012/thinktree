@@ -176,7 +176,8 @@ function stream(req, res) {
           }
           if (!sess) continue;
           const sig = sessionSig(sess);
-          const prev = lastSessions.get(s.id);
+          const key = `${agent.sourceId}:${s.id}`;
+          const prev = lastSessions.get(key);
           if (!prev || prev.sig !== sig) {
             const turnCount = sess.turns?.length || 0;
             // 轮数不变时只推最后一条（通常是正在增长的那一轮），避免每次传几 MB。
@@ -192,7 +193,7 @@ function stream(req, res) {
                 turns: lastTurn ? [lastTurn] : [],
               });
             }
-            lastSessions.set(s.id, { sig, turnCount });
+            lastSessions.set(key, { sig, turnCount });
           }
         }
       }
