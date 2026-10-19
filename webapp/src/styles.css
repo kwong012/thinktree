@@ -66,9 +66,13 @@ body {
   padding-left: 14px; border-left: 1px solid var(--border);
   font-size: 10.5px; color: var(--faint);
 }
-.status .sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
-.status[data-status="open"] .sdot { background: #5ffa68; }
+.status .sdot { width: 6px; height: 6px; border-radius: 0; background: var(--faint); }
+.status[data-status="open"] .sdot { background: #5ffa68; animation: tt-blink 1.6s ease-in-out infinite; }
 .status[data-status="error"] .sdot { background: #c7c400; }
+@keyframes tt-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .2; }
+}
 .status[data-status="connecting"] .sdot { animation: tt-breathe 1.8s ease-in-out infinite; }
 .status[data-status="error"] .sdot { animation: tt-breathe 1.8s ease-in-out infinite; }
 @keyframes tt-breathe {
