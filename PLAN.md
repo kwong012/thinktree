@@ -33,10 +33,12 @@ thinktree/
 │       ├── i18n.js              中英词典
 │       ├── styles.css           主题变量与全部样式
 │       └── canvas/
-│           ├── GraphCanvas.jsx  画布、展开、拖拽、避让、高亮
-│           ├── NodeCard.jsx     节点卡片 / 框内展开详情
-│           ├── FlowEdge.jsx     流动虚线边
+│           ├── GraphCanvas.jsx  画布外壳：工具栏、展开、物理模式、轨迹开关
+│           ├── CanvasStage.jsx  Canvas 2D 渲染器：节点/边/视口裁剪/小地图/交互
+│           ├── NodeDetail.jsx   展开详情（单个 DOM 覆盖层）
+│           ├── DesignTree.jsx   左侧轨迹树
 │           ├── KindIcon.jsx     自绘极简 SVG 图标
+│           ├── physics.js       局部唤醒碰撞求解（return / stay）
 │           └── context.js       LOD / 语言 / 展开上下文
 └── workfile-temp/               临时文件（git 忽略）
 ```
@@ -76,8 +78,11 @@ thinktree/
 | 远档全量色块 + 骨架连线 + 非缩放线宽 | ✅ |
 | 提问包络框 + 整轮拖动 | ✅ |
 | 可交互大号小地图（可隐藏） | ✅ |
-| 性能：视口裁剪 / 部分 SSE / 静态边 | ✅ |
+| Canvas 2D 渲染（批量路径 / 视口裁剪 / 无节点 DOM） | ✅ |
+| 局部唤醒物理（return / stay，默认 return） | ✅ |
+| 性能：7200 节点 / 7998 连线压测（p95 约 12–18ms） | ✅ |
 | 深/浅主题 + 中英切换 + SVG 图标 | ✅ |
+| `thinkTREE` 品牌字标 | ✅ |
 | 提交规范（每次改动即提交） | ✅（见 AGENTS.md） |
 
 ## 4. 后续可选
@@ -85,7 +90,7 @@ thinktree/
 - ZCode `rollout/model-io-*.jsonl` 原始 request/response 透传到 model-call 节点。
 - JSONL 增量 tail（避免每次整文件读取）。
 - PTY 兜底源（无本地存储的 CLI agent）。
-- 大数据量下的虚拟化/性能优化。
+- 移除已不参与渲染的 `@xyflow/react` 依赖。
 - 更多 agent（Claude Code、Gemini CLI 等）。
 
 ## 5. 启动 / 停止
@@ -93,7 +98,8 @@ thinktree/
 - 双击根目录 `thinktree.bat`：打开交互菜单（启动/停止/状态/浏览器/日志/清空）。
 - `[1]` 启动服务并自动用 Edge/Chrome 全屏（F11）打开浏览器。
 - 关闭浏览器标签/窗口后，SSE 客户端归零，服务在 2 秒后自动退出。
-- 手动运行：`npm start`（不会自动退出）。
+- 手动运行：`npm start`，默认端口 `9178`（`PORT` 可覆盖）。
+- 前端开发：`npm run dev:web`（Vite `5518`，`/api` 代理到 `9178`）。
 
 ## 6. 会话定位
 
