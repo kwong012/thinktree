@@ -200,12 +200,13 @@ export default function DesignTree({ session, open, onToggle, onJump }) {
                   {isOpen
                     ? turn.events
                         .filter((e) => e.kind !== 'send')
-                        .map((e) => (
+                        .map((e, i) => (
                           <button
                             key={e.id}
                             className={`tree-row tree-child kind-${e.kind}${
                               active === e.id ? ' active' : ''
                             }`}
+                            style={{ '--i': Math.min(i, 8) }}
                             onClick={() => {
                               setActive(e.id);
                               onJump?.(e.id);

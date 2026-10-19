@@ -1,4 +1,12 @@
-import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  Suspense,
+  lazy,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import GraphCanvas from './canvas/GraphCanvas.jsx';
 import { LangCtx } from './canvas/context.js';
 import { fetchAgents, fetchSession, openStream } from './api.js';
@@ -22,6 +30,9 @@ export default function App() {
   const [dashOpen, setDashOpen] = useState(false);
   const [dashLoaded, setDashLoaded] = useState(false);
   const dashLoading = useRef(new Set());
+  const tabsRef = useRef(null);
+  const lastActiveRef = useRef(null);
+  const [tabIndicator, setTabIndicator] = useState({ x: 0, w: 0, ready: false });
 
   useEffect(() => {
     if (dashOpen) setDashLoaded(true);
@@ -80,6 +91,35 @@ export default function App() {
     () => agents.find((a) => a.sourceId === activeSource) || agents[0] || null,
     [agents, activeSource],
   );
+
+  const agentKey = agents.map((a) => a.sourceId).join('|');
+  const activeSourceKey = activeAgent?.sourceId || '';
+
+  useLayoutEffect(() => {
+    const nav = tabsRef.current;
+    if (!nav) return undefined;
+    const shouldScroll = lastActiveRef.current !== activeSourceKey;
+    lastActiveRef.current = activeSourceKey;
+    const measure = () => {
+      const el = nav.querySelector('.tab.on');
+      if (!el) {
+        setTabIndicator((prev) => (prev.ready ? { x: 0, w: 0, ready: false } : prev));
+        return;
+      }
+      const next = { x: el.offsetLeft, w: el.offsetWidth, ready: true };
+      setTabIndicator((prev) =>
+        prev.ready && Math.abs(prev.x - next.x) < 0.5 && Math.abs(prev.w - next.w) < 0.5
+          ? prev
+          : next,
+      );
+      if (shouldScroll) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(nav);
+    document.fonts?.ready.then(measure).catch(() => {});
+    return () => ro.disconnect();
+  }, [agentKey, activeSourceKey, lang]);
 
   useEffect(() => {
     if (!activeAgent) {
@@ -223,7 +263,36 @@ export default function App() {
                 ? t(lang, 'reconnecting')
                 : t(lang, 'connecting')}
           </div>
-          <div className="spacer" />
+          <nav className="tabs" ref={tabsRef}>
+            {agents.map((a) => (
+              <button
+                key={a.sourceId}
+                className={`tab${a.sourceId === activeAgent?.sourceId ? ' on' : ''}`}
+                onClick={() => {
+                  const target =
+                    a.sessions?.find((s) => s.id === picked[a.sourceId]) || a.sessions?.[0];
+                  setActiveSource(a.sourceId);
+                  setActiveId(target?.id || null);
+                }}
+                title={a.description}
+              >
+                <span className="tabname">{a.name}</span>
+                <span className="iface">{IFACE_LABEL[a.interface] || a.interface}</span>
+                {a.focused ? <span className="focusdot" title={t(lang, 'foreground')} /> : null}
+                {a.sessions?.length > 1 ? <span className="scount">{a.sessions.length}</span> : null}
+              </button>
+            ))}
+            {!agents.length ? <span className="tabempty">{t(lang, 'noAgents')}</span> : null}
+            {tabIndicator.ready ? (
+              <span
+                className="tab-indicator"
+                style={{
+                  width: tabIndicator.w,
+                  transform: `translateX(${tabIndicator.x}px)`,
+                }}
+              />
+            ) : null}
+          </nav>
           {focused ? (
             <span className="focused">
               <span className="flabel">{t(lang, 'foreground')}</span>
@@ -259,28 +328,6 @@ export default function App() {
             </button>
           </div>
         </header>
-
-        <nav className="tabs">
-          {agents.map((a) => (
-            <button
-              key={a.sourceId}
-              className={`tab${a.sourceId === activeAgent?.sourceId ? ' on' : ''}`}
-              onClick={() => {
-                const target =
-                  a.sessions?.find((s) => s.id === picked[a.sourceId]) || a.sessions?.[0];
-                setActiveSource(a.sourceId);
-                setActiveId(target?.id || null);
-              }}
-              title={a.description}
-            >
-              <span className="tabname">{a.name}</span>
-              <span className="iface">{IFACE_LABEL[a.interface] || a.interface}</span>
-              {a.focused ? <span className="focusdot" title={t(lang, 'foreground')} /> : null}
-              {a.sessions?.length > 1 ? <span className="scount">{a.sessions.length}</span> : null}
-            </button>
-          ))}
-          {!agents.length ? <span className="tabempty">{t(lang, 'noAgents')}</span> : null}
-        </nav>
 
         {activeAgent ? (
           <div className="sessionbar">

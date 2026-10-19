@@ -1,6 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { t } from '../i18n.js';
+import { REDUCED, MOTION, easeOutExpo, tween } from '../motion.js';
 import EChart from './EChart.jsx';
 import {
   buildDashboard,
@@ -66,6 +67,8 @@ export default function Dashboard({
       : String(sessionCount);
 
   const heatHeight = heatRange === '7d' ? 248 : heatRange === '30d' ? 140 : 104;
+  const kpiKey = `${open ? 'open' : 'closed'}|${agent?.sourceId || ''}|${scope}`;
+  const chartKey = `${open ? 'open' : 'closed'}|${scope}|${heatRange}`;
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()} modal={false}>
@@ -127,36 +130,56 @@ export default function Dashboard({
 
         <div className="dash-body">
           <div className="dash-kpis">
-            <Kpi label={t(lang, 'dashSessions')} value={loadedLabel} sub={agent?.interface || ''} />
             <Kpi
+              index={0}
+              label={t(lang, 'dashSessions')}
+              value={loadedLabel}
+              sub={agent?.interface || ''}
+            />
+            <Kpi
+              index={1}
               label={t(lang, 'dashContext')}
-              value={formatTokens(dash.contextTokens)}
+              value={dash.contextTokens}
+              format={formatTokens}
+              animateKey={kpiKey}
               sub={`${formatTokens(dash.usage.input)} ${t(lang, 'dashFreshInput')}`}
             />
             <Kpi
+              index={2}
               label={t(lang, 'dashCacheHit')}
-              value={formatPct(dash.cacheRate)}
+              value={dash.cacheRate}
+              format={formatPct}
+              animateKey={kpiKey}
               sub={`${formatTokens(dash.usage.cacheRead)} ${t(lang, 'dashCacheRead')}`}
             />
             <Kpi
+              index={3}
               label={t(lang, 'dashGenerated')}
-              value={formatTokens(dash.generated)}
+              value={dash.generated}
+              format={formatTokens}
+              animateKey={kpiKey}
               sub={`${formatTokens(dash.usage.output)} / ${formatTokens(dash.usage.reasoning)}`}
             />
             <Kpi
+              index={4}
               label={t(lang, 'dashCost')}
-              value={formatCost(dash.cost)}
+              value={dash.cost}
+              format={formatCost}
+              animateKey={kpiKey}
               sub={scope === 'agent' ? t(lang, 'dashAllSessions') : t(lang, 'dashSession')}
             />
             <Kpi
+              index={5}
               label={t(lang, 'turns')}
-              value={String(dash.turns)}
+              value={dash.turns}
+              format={formatCount}
+              animateKey={kpiKey}
               sub={formatDuration(dash.durationMs)}
             />
           </div>
 
           <div className="dash-grid">
-            <section className="dash-card dash-wide">
+            <section className="dash-card dash-wide" style={{ '--i': 0 }}>
               <div className="dash-card-head">
                 <div>
                   <div className="dash-card-title">
@@ -168,13 +191,19 @@ export default function Dashboard({
                 </div>
               </div>
               {tokenOption ? (
-                <EChart option={tokenOption} height={286} active={open} label={t(lang, 'dashTokenBySession')} />
+                <EChart
+                  option={tokenOption}
+                  height={286}
+                  active={open}
+                  animationKey={chartKey}
+                  label={t(lang, 'dashTokenBySession')}
+                />
               ) : (
                 <Empty lang={lang} />
               )}
             </section>
 
-            <section className="dash-card">
+            <section className="dash-card" style={{ '--i': 1 }}>
               <div className="dash-card-head">
                 <div>
                   <div className="dash-card-title">{t(lang, 'dashCacheTrend')}</div>
@@ -182,13 +211,19 @@ export default function Dashboard({
                 </div>
               </div>
               {cacheOption ? (
-                <EChart option={cacheOption} height={238} active={open} label={t(lang, 'dashCacheTrend')} />
+                <EChart
+                  option={cacheOption}
+                  height={238}
+                  active={open}
+                  animationKey={chartKey}
+                  label={t(lang, 'dashCacheTrend')}
+                />
               ) : (
                 <Empty lang={lang} />
               )}
             </section>
 
-            <section className="dash-card">
+            <section className="dash-card" style={{ '--i': 2 }}>
               <div className="dash-card-head">
                 <div>
                   <div className="dash-card-title">{t(lang, 'dashContextMix')}</div>
@@ -202,13 +237,19 @@ export default function Dashboard({
                 </div>
               </div>
               {contextOption ? (
-                <EChart option={contextOption} height={238} active={open} label={t(lang, 'dashContextMix')} />
+                <EChart
+                  option={contextOption}
+                  height={238}
+                  active={open}
+                  animationKey={chartKey}
+                  label={t(lang, 'dashContextMix')}
+                />
               ) : (
                 <Empty lang={lang} />
               )}
             </section>
 
-            <section className="dash-card dash-wide">
+            <section className="dash-card dash-wide" style={{ '--i': 3 }}>
               <div className="dash-card-head">
                 <div>
                   <div className="dash-card-title">{t(lang, 'dashHeat')}</div>
@@ -246,6 +287,7 @@ export default function Dashboard({
                   option={heatOption}
                   height={heatHeight}
                   active={open}
+                  animationKey={chartKey}
                   label={t(lang, 'dashHeat')}
                 />
               ) : (
@@ -254,7 +296,7 @@ export default function Dashboard({
             </section>
           </div>
 
-          <section className="dash-card dash-table-card">
+          <section className="dash-card dash-table-card" style={{ '--i': 4 }}>
             <div className="dash-card-head">
               <div>
                 <div className="dash-card-title">{t(lang, 'dashTable')}</div>
@@ -320,14 +362,61 @@ export default function Dashboard({
   );
 }
 
-function Kpi({ label, value, sub }) {
+function Kpi({ label, value, format, sub, index = 0, animateKey = '' }) {
   return (
-    <div className="dash-kpi">
+    <div className="dash-kpi" style={{ '--i': index }}>
       <div className="dash-kpi-label">{label}</div>
-      <div className="dash-kpi-value">{value}</div>
+      <div className="dash-kpi-value">
+        {typeof value === 'number' ? (
+          <AnimatedNumber value={value} format={format} animateKey={animateKey} />
+        ) : (
+          value
+        )}
+      </div>
       <div className="dash-kpi-sub">{sub}</div>
     </div>
   );
+}
+
+function AnimatedNumber({ value, format, animateKey }) {
+  const [display, setDisplay] = useState(value);
+  const fromRef = useRef(value);
+  const keyRef = useRef(null);
+
+  useEffect(() => {
+    const target = Number.isFinite(value) ? value : 0;
+    const prevKey = keyRef.current;
+    const keyChanged = animateKey !== prevKey;
+    keyRef.current = animateKey;
+
+    if (REDUCED || !keyChanged) {
+      fromRef.current = target;
+      setDisplay(target);
+      return undefined;
+    }
+
+    // 从关闭到打开时从 0 滚入；切换 scope/agent 时从当前值滚到新值。
+    const opening =
+      animateKey.startsWith('open') && (!prevKey || prevKey.startsWith('closed'));
+    const from = opening ? 0 : Number.isFinite(fromRef.current) ? fromRef.current : target;
+    fromRef.current = target;
+    return tween({
+      from,
+      to: target,
+      duration: MOTION.countUp,
+      ease: easeOutExpo,
+      onUpdate: (v) => setDisplay(v),
+    });
+  }, [value, animateKey]);
+
+  if (typeof display !== 'number' || !Number.isFinite(display) || !format) {
+    return format ? format(value) : value;
+  }
+  return format(display);
+}
+
+function formatCount(n) {
+  return String(Math.round(Number(n) || 0));
 }
 
 function Empty({ lang }) {

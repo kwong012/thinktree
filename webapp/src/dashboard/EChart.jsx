@@ -9,6 +9,7 @@ import {
   VisualMapComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { REDUCED } from '../motion.js';
 
 echarts.use([
   BarChart,
@@ -23,9 +24,10 @@ echarts.use([
   CanvasRenderer,
 ]);
 
-export default function EChart({ option, height = 280, active = true, label = '' }) {
+export default function EChart({ option, height = 280, active = true, animationKey = '', label = '' }) {
   const holder = useRef(null);
   const chart = useRef(null);
+  const animKeyRef = useRef('');
 
   useEffect(() => {
     if (!holder.current) return undefined;
@@ -45,8 +47,12 @@ export default function EChart({ option, height = 280, active = true, label = ''
 
   useEffect(() => {
     if (!chart.current || !option) return;
-    chart.current.setOption(option, { notMerge: true, lazyUpdate: false });
-  }, [option]);
+    // 只在打开/切换范围时播放动画；增量刷新直接更新，避免每 1.2s 重播。
+    const changed = animationKey !== animKeyRef.current;
+    animKeyRef.current = animationKey;
+    const next = changed && !REDUCED ? option : { ...option, animation: false };
+    chart.current.setOption(next, { notMerge: true, lazyUpdate: false });
+  }, [option, animationKey]);
 
   useEffect(() => {
     if (!active || !chart.current) return undefined;

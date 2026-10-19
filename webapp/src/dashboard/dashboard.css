@@ -12,17 +12,33 @@
   box-shadow: -24px 0 70px rgba(0, 0, 0, 0.6);
   z-index: 50;
   transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.22, 0.7, 0.2, 1), visibility 0s 0.28s;
+  transition: transform 0.34s cubic-bezier(0.18, 1.14, 0.22, 1), visibility 0s 0.34s;
   will-change: transform;
   outline: none;
 }
 .dashboard[data-state="open"] {
   transform: none;
-  transition: transform 0.28s cubic-bezier(0.22, 0.7, 0.2, 1), visibility 0s 0s;
+  transition: transform 0.34s cubic-bezier(0.18, 1.14, 0.22, 1), visibility 0s 0s;
 }
 .dashboard[data-state="closed"] {
   visibility: hidden;
   pointer-events: none;
+}
+
+@keyframes dash-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.dashboard[data-state="open"] .dash-kpi,
+.dashboard[data-state="open"] .dash-card {
+  animation: dash-rise 0.34s cubic-bezier(0.18, 1.14, 0.22, 1) both;
+  animation-delay: calc(var(--i, 0) * 26ms);
 }
 
 .dash-head {
@@ -312,4 +328,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .dashboard, .dashboard[data-state="open"] { transition: none; }
+  .dashboard[data-state="open"] .dash-kpi,
+  .dashboard[data-state="open"] .dash-card { animation: none; }
 }

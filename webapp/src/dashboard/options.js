@@ -1,4 +1,5 @@
 import { t } from '../i18n.js';
+import { MOTION } from '../motion.js';
 import { formatCost, formatPct, formatTokens } from './metrics.js';
 
 const C = {
@@ -114,8 +115,10 @@ export function buildTokenOption(rows, lang) {
   ];
   return {
     backgroundColor: 'transparent',
-    animationDuration: 320,
+    animationDuration: MOTION.chart,
     animationDurationUpdate: 180,
+    animationEasing: 'quarticOut',
+    animationEasingUpdate: 'cubicInOut',
     grid: grid(),
     legend: legend(),
     tooltip: {
@@ -147,6 +150,7 @@ export function buildTokenOption(rows, lang) {
       type: 'bar',
       stack: 'token',
       barMaxWidth: 26,
+      animationDelay: (idx) => Math.min(idx * 14, 180),
       emphasis: { focus: 'series' },
       itemStyle: { color: p.color, borderColor: '#000', borderWidth: 0.5 },
       data: rows.map((r) => r.usage[p.key] || 0),
@@ -157,8 +161,10 @@ export function buildTokenOption(rows, lang) {
 export function buildCacheOption(rows, lang) {
   return {
     backgroundColor: 'transparent',
-    animationDuration: 320,
+    animationDuration: MOTION.chart,
     animationDurationUpdate: 180,
+    animationEasing: 'cubicInOut',
+    animationEasingUpdate: 'cubicInOut',
     grid: grid({ top: 12, bottom: 44 }),
     tooltip: {
       ...tooltip(),
@@ -207,7 +213,8 @@ export function buildContextOption(dash, lang) {
 
   return {
     backgroundColor: 'transparent',
-    animationDuration: 320,
+    animationDuration: 480,
+    animationEasing: 'cubicOut',
     tooltip: {
       ...itemTooltip(),
       formatter: (p) =>
@@ -253,6 +260,8 @@ export function buildContextOption(dash, lang) {
         type: 'pie',
         radius: ['58%', '80%'],
         center: ['50%', '44%'],
+        animationType: 'scale',
+        animationEasing: 'cubicOut',
         avoidLabelOverlap: true,
         label: { show: false },
         labelLine: { show: false },

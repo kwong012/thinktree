@@ -14,6 +14,13 @@ import { createPhysics } from './physics.js';
 import { NODE_SIZE, MIN_GAP } from '../layout.js';
 import { lodFor } from '../lod.js';
 import { t } from '../i18n.js';
+import {
+  REDUCED,
+  MOTION,
+  easeOutQuint,
+  easeInOutCubic,
+  easeOutBack,
+} from '../motion.js';
 
 const KIND_COLOR = {
   send: '#6871ff',
@@ -34,10 +41,6 @@ const MINI_H = 255;
 
 const SANS = '"IBM Plex Sans Condensed", "Segoe UI", "Microsoft YaHei", sans-serif';
 const MONO = '"IBM Plex Mono", ui-monospace, Consolas, monospace';
-const REDUCED =
-  typeof window !== 'undefined' &&
-  window.matchMedia &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
@@ -314,31 +317,30 @@ function pathRect(ctx, x, y, w, h, r) {
   ctx.quadraticCurveTo(x, y, x + r, y);
 }
 
-function paintEdges(ctx, scene, vp, W, H, { skipAnimated, onlyAnimated, dashOffset }) {
+function paintEdges(ctx, scene, vp, W, H, { dashOffset } = {}) {
   const z = vp.zoom;
   const groups = new Map();
   const labels = [];
 
   for (const e of scene.edges) {
-    if (onlyAnimated && !e.animate) continue;
-    if (skipAnimated && e.animate) continue;
     const s = e.sourceNode;
     const tg = e.targetNode;
     if (!s || !tg) continue;
     const sx = (s.x + s.w) * z + vp.x;
-    const sy = (s.y + s.h / 2) * z + vp.y;
+    const sy = (s.y + s.h / 2 + (s._enterDy || 0)) * z + vp.y;
     const tx = tg.x * z + vp.x;
-    const ty = (tg.y + tg.h / 2) * z + vp.y;
+    const ty = (tg.y + tg.h / 2 + (tg._enterDy || 0)) * z + vp.y;
     if (Math.max(sx, tx) < 0 || Math.min(sx, tx) > W) continue;
     if (Math.max(sy, ty) < 0 || Math.min(sy, ty) > H) continue;
 
     const far = z < 0.16;
     const width = far ? (e.skeleton ? 1.5 : 1.2) : e.width;
-    const alpha = far && !e.skeleton ? 0.7 : 1;
-    const key = `${e.color}|${width}|${e.dashed ? 1 : 0}|${alpha}`;
+    const alpha = far && !e.skeleton ? 0.7 : e.animate ? 0.5 : 1;
+    const dashed = e.dashed || e.animate;
+    const key = `${e.color}|${width}|${dashed ? 1 : 0}|${alpha}`;
     let group = groups.get(key);
     if (!group) {
-      groups.set(key, (group = { color: e.color, width, alpha, dashed: e.dashed, segs: [] }));
+      groups.set(key, (group = { color: e.color, width, alpha, dashed, segs: [] }));
     }
     group.segs.push(sx, sy, tx, ty);
 
@@ -555,10 +557,7 @@ function drawScene(ctx, scene, vp, W, H, opts) {
     ctx.fillText(label, x + 9, y - 12 * z);
   }
 
-  paintEdges(ctx, scene, vp, W, H, {
-    skipAnimated: opts.skipAnimated && !REDUCED,
-    dashOffset: 0,
-  });
+  paintEdges(ctx, scene, vp, W, H);
 
   const blocks = new Map();
   const cards = [];
@@ -588,13 +587,24 @@ function drawScene(ctx, scene, vp, W, H, opts) {
 
   for (const c of cards) {
     const level = z >= 0.8 ? 3 : 2;
-    drawCard(ctx, c.n, vp, c.sx, c.sy, c.sw, c.sh, {
+    const enterScale = c.n._enterScale ?? 1;
+    const drawSy = c.sy + (c.n._enterDy || 0) * z;
+    ctx.save();
+    if (enterScale !== 1) {
+      const cx = c.sx + c.sw / 2;
+      const cy = drawSy + c.sh / 2;
+      ctx.translate(cx, cy);
+      ctx.scale(enterScale, enterScale);
+      ctx.translate(-cx, -cy);
+    }
+    drawCard(ctx, c.n, vp, c.sx, drawSy, c.sw, c.sh, {
       lang: opts.lang,
       hovered: opts.hoverId === c.n.id,
       selected: opts.selected.has(c.n.id),
       expanded: opts.expandedId === c.n.id,
       level,
     });
+    ctx.restore();
   }
 }
 
@@ -632,6 +642,7 @@ export default function CanvasStage({
   const engineRaf = useRef(0);
   const paintRaf = useRef(0);
   const animRaf = useRef(0);
+  const enterRaf = useRef(0);
   const camRaf = useRef(0);
   const miniBaseRef = useRef(null);
   const miniDragRef = useRef(null);
@@ -693,36 +704,40 @@ export default function CanvasStage({
       const tg = e.targetNode;
       if (!s || !tg) continue;
       const sx = (s.x + s.w) * z + vp.x;
-      const sy = (s.y + s.h / 2) * z + vp.y;
+      const sy = (s.y + s.h / 2 + (s._enterDy || 0)) * z + vp.y;
       const tx = tg.x * z + vp.x;
-      const ty = (tg.y + tg.h / 2) * z + vp.y;
+      const ty = (tg.y + tg.h / 2 + (tg._enterDy || 0)) * z + vp.y;
       if (Math.max(sx, tx) < 0 || Math.min(sx, tx) > w) continue;
       if (Math.max(sy, ty) < 0 || Math.min(sy, ty) > h) continue;
+
+      // 非匀速流动：在匀速位移上叠加轻微正弦摆动，alpha 同步呼吸。
+      const phase = e.phase || 0;
+      const travel = (now / 1600 + phase) % 1;
+      const wobble = 0.35 * Math.sin(now / 700 + phase * Math.PI * 2);
+      const offset = -(travel * 11 + wobble);
+      const breathe = 0.75 + 0.25 * Math.sin(now / 900 + phase * Math.PI * 2);
+      const width = z < 0.16 ? 1.5 : e.width;
+
       ctx.strokeStyle = e.color;
-      ctx.lineWidth = z < 0.16 ? 1.5 : e.width;
-      ctx.setLineDash([4, 7]);
-      ctx.lineDashOffset = -(((now / 1600 + (e.phase || 0)) % 1) * 11);
+      ctx.lineDashOffset = offset * 0.72;
+      ctx.globalAlpha = 0.14 * breathe;
+      ctx.lineWidth = width * 2.8;
+      ctx.setLineDash([3, 8]);
       ctx.beginPath();
       bezier(ctx, sx, sy, tx, ty);
       ctx.stroke();
-      if (e.label && z >= 0.16) {
-        ctx.setLineDash([]);
-        ctx.font = `8.5px ${SANS}`;
-        ctx.textBaseline = 'top';
-        const lx = (sx + tx) / 2;
-        const ly = (sy + ty) / 2;
-        const lw = ctx.measureText(e.label).width;
-        ctx.fillStyle = 'rgba(0,0,0,.85)';
-        ctx.beginPath();
-        roundedRect(ctx, lx - lw / 2 - 3, ly - 7, lw + 6, 12, 4);
-        ctx.fill();
-        ctx.fillStyle = '#8a8a8a';
-        ctx.fillText(e.label, lx - lw / 2, ly - 6);
-        ctx.setLineDash([4, 7]);
-      }
+
+      ctx.lineDashOffset = offset;
+      ctx.globalAlpha = Math.max(0.45, breathe);
+      ctx.lineWidth = width;
+      ctx.setLineDash([4, 7]);
+      ctx.beginPath();
+      bezier(ctx, sx, sy, tx, ty);
+      ctx.stroke();
     }
     ctx.setLineDash([]);
     ctx.lineDashOffset = 0;
+    ctx.globalAlpha = 1;
   }, []);
 
   const animTick = useCallback(
@@ -747,6 +762,49 @@ export default function CanvasStage({
     animRaf.current = 0;
     clearAnim();
   }, [clearAnim]);
+
+  const settleEnter = useCallback(() => {
+    for (const n of sceneRef.current.nodes) {
+      if (!n._enter) continue;
+      delete n._enter;
+      n._enterScale = 1;
+      n._enterDy = 0;
+    }
+  }, []);
+
+  const startEnterAnim = useCallback(() => {
+    if (REDUCED) return;
+    if (!sceneRef.current.nodes.some((n) => n._enter)) return;
+    if (enterRaf.current) return;
+    const ease = easeOutBack(1.0);
+    const tick = (now) => {
+      enterRaf.current = 0;
+      if (document.hidden) {
+        settleEnter();
+        schedulePaint();
+        return;
+      }
+      let active = 0;
+      for (const n of sceneRef.current.nodes) {
+        const en = n._enter;
+        if (!en) continue;
+        const p = clamp((now - en.start) / en.dur, 0, 1);
+        const e = ease(p);
+        n._enterScale = 0.94 + 0.06 * e;
+        n._enterDy = 6 * (1 - e);
+        if (p >= 1) {
+          delete n._enter;
+          n._enterScale = 1;
+          n._enterDy = 0;
+        } else {
+          active += 1;
+        }
+      }
+      schedulePaint();
+      if (active) enterRaf.current = requestAnimationFrame(tick);
+    };
+    enterRaf.current = requestAnimationFrame(tick);
+  }, [schedulePaint, settleEnter]);
 
   const setInteracting = useCallback(
     (v) => {
@@ -798,7 +856,6 @@ export default function CanvasStage({
       hoverId: hoverRef.current,
       selected: selRef.current,
       expandedId: expandedRef.current,
-      skipAnimated: !interactingRef.current,
     });
 
     const drag = dragRef.current;
@@ -923,7 +980,7 @@ export default function CanvasStage({
   }, []);
 
   const animateTo = useCallback(
-    (target, duration = 320) => {
+    (target, duration = MOTION.camera, opts = {}) => {
       cancelCamAnim();
       const start = { ...vpRef.current };
       if (!duration || REDUCED) {
@@ -931,14 +988,30 @@ export default function CanvasStage({
         afterViewport();
         return;
       }
+      const { w, h } = sizeRef.current;
+      const ease = opts.ease || easeOutQuint;
+      const z0 = Math.max(MIN_ZOOM, start.zoom);
+      const z1 = Math.max(MIN_ZOOM, target.zoom);
+      const lz0 = Math.log(z0);
+      const lz1 = Math.log(z1);
+      const wx0 = (w / 2 - start.x) / z0;
+      const wy0 = (h / 2 - start.y) / z0;
+      const wx1 = (w / 2 - target.x) / z1;
+      const wy1 = (h / 2 - target.y) / z1;
+      const bump = opts.zoomBump || 0;
+
       setInteracting(true);
       const t0 = performance.now();
       const tick = (now) => {
         const p = Math.min(1, (now - t0) / duration);
-        const e = 1 - Math.pow(1 - p, 3);
-        vpRef.current.x = start.x + (target.x - start.x) * e;
-        vpRef.current.y = start.y + (target.y - start.y) * e;
-        vpRef.current.zoom = start.zoom + (target.zoom - start.zoom) * e;
+        const e = ease(p);
+        const wx = wx0 + (wx1 - wx0) * e;
+        const wy = wy0 + (wy1 - wy0) * e;
+        // zoom 在对数空间插值，并在远距离跳转时叠加「先拉远」的弧度。
+        let lz = lz0 + (lz1 - lz0) * e;
+        if (bump) lz -= bump * Math.sin(Math.PI * p);
+        const z = clamp(Math.exp(lz), MIN_ZOOM, MAX_ZOOM);
+        vpRef.current = { zoom: z, x: w / 2 - wx * z, y: h / 2 - wy * z };
         afterViewport();
         if (p < 1) {
           camRaf.current = requestAnimationFrame(tick);
@@ -953,7 +1026,7 @@ export default function CanvasStage({
   );
 
   const centerOn = useCallback(
-    (n, zoom, duration = 300) => {
+    (n, zoom, duration = MOTION.camera, opts = {}) => {
       const { w, h } = sizeRef.current;
       const z = clamp(zoom ?? vpRef.current.zoom, MIN_ZOOM, MAX_ZOOM);
       animateTo(
@@ -963,6 +1036,7 @@ export default function CanvasStage({
           y: h / 2 - (n.y + n.h / 2) * z,
         },
         duration,
+        opts,
       );
     },
     [animateTo],
@@ -1000,22 +1074,35 @@ export default function CanvasStage({
       MIN_ZOOM,
       1.2,
     );
-    animateTo(
-      { zoom: z, x: w / 2 - ((minX + maxX) / 2) * z, y: h / 2 - ((minY + maxY) / 2) * z },
-      450,
+    const vp = vpRef.current;
+    const target = {
+      zoom: z,
+      x: w / 2 - ((minX + maxX) / 2) * z,
+      y: h / 2 - ((minY + maxY) / 2) * z,
+    };
+    const dist = Math.hypot(
+      ((minX + maxX) / 2) - (w / 2 - vp.x) / vp.zoom,
+      ((minY + maxY) / 2) - (h / 2 - vp.y) / vp.zoom,
     );
+    const ratio = Math.abs(Math.log(z / Math.max(MIN_ZOOM, vp.zoom)));
+    const zoomBump = ratio > 0.3 || dist > 1400 ? 0.18 : 0;
+    animateTo(target, MOTION.cameraFar, { ease: easeInOutCubic, zoomBump });
   }, [animateTo]);
 
   const centerLatest = useCallback(() => {
     const list = sceneRef.current.nodes;
     if (!list.length) return;
-    centerOn(list[list.length - 1], 1, 450);
+    centerOn(list[list.length - 1], 1, MOTION.camera, { ease: easeOutBack(0.6) });
   }, [centerOn]);
 
   const jumpTo = useCallback(
     (id) => {
       const n = sceneRef.current.nodeById.get(id);
-      if (n) centerOn(n, Math.max(vpRef.current.zoom, 0.9), 450);
+      if (n) {
+        centerOn(n, Math.max(vpRef.current.zoom, 0.9), MOTION.camera, {
+          ease: easeOutBack(0.6),
+        });
+      }
     },
     [centerOn],
   );
@@ -1027,7 +1114,7 @@ export default function CanvasStage({
       const z = clamp(vp.zoom * factor, MIN_ZOOM, MAX_ZOOM);
       const wx = (w / 2 - vp.x) / vp.zoom;
       const wy = (h / 2 - vp.y) / vp.zoom;
-      animateTo({ zoom: z, x: w / 2 - wx * z, y: h / 2 - wy * z }, 200);
+      animateTo({ zoom: z, x: w / 2 - wx * z, y: h / 2 - wy * z }, MOTION.fast);
     },
     [animateTo],
   );
@@ -1038,6 +1125,7 @@ export default function CanvasStage({
 
   /* ---------- sync computed graph into the canvas scene ---------- */
   useEffect(() => {
+    const firstLoad = !initializedRef.current;
     const prevById = sceneRef.current.nodeById;
     const current = new Map();
     for (const n of nodes) {
@@ -1139,11 +1227,28 @@ export default function CanvasStage({
       selRef.current = ids;
     }
 
+    // 增量到来的新节点做一次克制入场；首次加载与大图不播，避免整屏弹跳。
+    if (!firstLoad && !REDUCED) {
+      const now = performance.now();
+      let budget = 12;
+      let i = 0;
+      for (const n of list) {
+        if (prevById.has(n.id)) continue;
+        if (budget <= 0) break;
+        n._enter = { start: now + i * MOTION.enterStagger, dur: MOTION.enter };
+        n._enterScale = 0.94;
+        n._enterDy = 6;
+        budget -= 1;
+        i += 1;
+      }
+    }
+
     ensureInitialView();
     rebuildMini();
     positionDetail();
     schedulePaint();
     startAnim();
+    startEnterAnim();
   }, [
     nodes,
     edges,
@@ -1157,6 +1262,7 @@ export default function CanvasStage({
     positionDetail,
     schedulePaint,
     startAnim,
+    startEnterAnim,
   ]);
 
   const centeredExpandRef = useRef(null);
@@ -1268,7 +1374,7 @@ export default function CanvasStage({
 
   useEffect(() => {
     return () => {
-      for (const r of [engineRaf, paintRaf, animRaf, camRaf]) {
+      for (const r of [engineRaf, paintRaf, animRaf, enterRaf, camRaf]) {
         if (r.current) cancelAnimationFrame(r.current);
       }
     };
