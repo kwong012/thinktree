@@ -18,6 +18,34 @@ export function pickLive(procSnapshot, patterns, sessions, opts = {}) {
 
   const ordered = preferCwd(sessions, processes);
   const norm = (v) => String(v || '').replace(/[\\/]+$/, '').replace(/\//g, '\\').toLowerCase();
+  const normName = (v) => String(v || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const activeNames = (opts.activeNames || []).map(normName).filter(Boolean);
+
+  // 终端 tab 是“当前会话”的最快信号：优先于 cwd / updatedAt 推断。
+  if (activeNames.length) {
+    const namesOf = (s) => [s.name, s.title].map(normName).filter(Boolean);
+    const take = (predicate) => {
+      const seen = new Set();
+      return sessions
+        .filter((s) => {
+          if (seen.has(s.id)) return false;
+          if (!namesOf(s).some(predicate)) return false;
+          seen.add(s.id);
+          return true;
+        })
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    };
+    let active = take((n) => activeNames.includes(n));
+    if (!active.length) {
+      active = take((n) =>
+        activeNames.some(
+          (a) => Math.min(n.length, a.length) >= 4 && (n.startsWith(a) || a.startsWith(n)),
+        ),
+      );
+    }
+    if (active.length) return { processes, sessions: active };
+  }
+
   const allCwds = new Set(processes.map((p) => norm(p.cwd)).filter(Boolean));
   const focusedPid = procSnapshot?.focused?.pid;
   const focusedProc = focusedPid ? processes.find((p) => p.pid === focusedPid) : null;

@@ -88,8 +88,9 @@ export function createOpencodeAdapter({ dbPath = DEFAULT_DB, mcpServers = [] } =
   }
 
   /** @returns {Array} light session summaries for the sidebar */
-  function listSessions({ limit = 200, directory } = {}) {
+  function listSessions({ limit = 200, directory, titles = [] } = {}) {
     const v2 = hasTable('session_v2');
+    const wanted = [...new Set((titles || []).map((t) => String(t || '').trim()).filter(Boolean))];
     const rows = [];
     if (v2) {
       const sql =
@@ -114,6 +115,40 @@ export function createOpencodeAdapter({ dbPath = DEFAULT_DB, mcpServers = [] } =
         if (!known.has(r.id)) rows.push(mapSessionRow(r, 'v1'));
       }
     }
+
+    // 当前会话可能很早创建、不在最近 limit 条里；只补查缺失的标题。
+    const missingTitles = wanted.filter((t) => !rows.some((r) => r.title === t));
+    if (missingTitles.length) {
+      const placeholders = missingTitles.map(() => '?').join(',');
+      const known = new Set(rows.map((r) => r.id));
+      if (v2) {
+        const sql =
+          'select s.id, s.title, s.agent, s.model, s.directory, s.time_created, s.time_updated, ' +
+          's.tokens_input, s.tokens_output, s.tokens_reasoning, s.tokens_cache_read, s.tokens_cache_write, s.cost, ' +
+          'p.worktree as worktree, p.name as project_name ' +
+          'from session_v2 s left join project p on p.id = s.project_id ' +
+          `where s.title in (${placeholders})`;
+        for (const r of open().prepare(sql).all(...missingTitles)) {
+          if (known.has(r.id)) continue;
+          rows.push(mapSessionRow(r, 'v2'));
+          known.add(r.id);
+        }
+      }
+      if (hasTable('session')) {
+        const sql =
+          'select s.id, s.title, s.agent, s.model, s.directory, s.time_created, s.time_updated, ' +
+          '0 as tokens_input, 0 as tokens_output, 0 as tokens_reasoning, 0 as tokens_cache_read, 0 as tokens_cache_write, s.cost, ' +
+          'p.worktree as worktree, p.name as project_name ' +
+          'from session s left join project p on p.id = s.project_id ' +
+          `where s.title in (${placeholders})`;
+        for (const r of open().prepare(sql).all(...missingTitles)) {
+          if (known.has(r.id)) continue;
+          rows.push(mapSessionRow(r, 'v1'));
+          known.add(r.id);
+        }
+      }
+    }
+
     rows.sort((a, b) => b.updatedAt - a.updatedAt);
     const filtered = directory ? rows.filter((r) => r.directory === directory) : rows;
     return filtered;

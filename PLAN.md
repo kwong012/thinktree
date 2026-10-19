@@ -110,6 +110,7 @@ thinktree/
 
 ## 6. 会话定位
 
-- CLI/TUI：读取进程 cwd，只显示存活进程对应的当前会话（每个 cwd 取最新，不列历史）。
-- pi：额外读取 Windows Terminal 标签页 `π - <会话名> - <用户>`，按 `session_info.name` 精确匹配。
+- CLI/TUI：优先跟随 Windows Terminal 当前选中的 tab；否则读取进程 cwd，显示每个 cwd 的最新会话（不列历史）。
+- opencode：读取 `OC | <会话标题>` 标签页，按 session title 精确匹配；标题不在最近 100 条时按标题补查数据库。
+- pi：读取 Windows Terminal 标签页 `π - <会话名> - <用户>`，按 `session_info.name` 精确匹配。
 - 桌面端：不参与 cwd 匹配。

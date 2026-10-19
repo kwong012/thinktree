@@ -105,12 +105,10 @@ export function createPiSource() {
     listLive(procSnapshot) {
       const { list } = scan();
       const activeName = getPiSessionName();
-      let ordered = list;
-      if (activeName) {
-        const i = list.findIndex((s) => s.name && s.name.toLowerCase() === activeName.toLowerCase());
-        if (i > 0) ordered = [list[i], ...list.slice(0, i), ...list.slice(i + 1)];
-      }
-      const live = pickLive(procSnapshot, PATTERNS, ordered, { aliveWindow: ALIVE_WINDOW });
+      const live = pickLive(procSnapshot, PATTERNS, list, {
+        aliveWindow: ALIVE_WINDOW,
+        activeNames: activeName ? [activeName] : [],
+      });
       live.sessions = preferCwd(live.sessions, live.processes);
       return live;
     },
