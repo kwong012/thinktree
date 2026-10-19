@@ -31,17 +31,6 @@ export default function Dashboard({
   const [scope, setScope] = useState('agent');
   const [heatRange, setHeatRange] = useState('24h');
   const lastDash = useRef(null);
-  const wasOpen = useRef(false);
-
-  // 默认始终回到「全部会话」；手动切到当前会话只在本次打开内有效。
-  useEffect(() => {
-    if (open && !wasOpen.current) setScope('agent');
-    wasOpen.current = open;
-  }, [open]);
-
-  useEffect(() => {
-    setScope('agent');
-  }, [agent?.sourceId]);
 
   const dash = useMemo(() => {
     if (!open && lastDash.current) return lastDash.current;
