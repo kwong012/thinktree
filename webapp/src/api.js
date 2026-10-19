@@ -12,6 +12,14 @@ export async function fetchSession(sourceId, id) {
   return r.json();
 }
 
+export async function fetchDashboard(sourceId, range) {
+  const r = await fetch(
+    `/api/dashboard/${encodeURIComponent(sourceId)}?range=${encodeURIComponent(range)}`,
+  );
+  if (!r.ok) throw new Error(`dashboard ${r.status}`);
+  return r.json();
+}
+
 /**
  * SSE 流：
  *   event: agents   存活 agent + 活会话摘要

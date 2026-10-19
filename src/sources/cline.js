@@ -81,6 +81,10 @@ export function createClineSource() {
       return pickLive(procSnapshot, PATTERNS, list, { aliveWindow: ALIVE_WINDOW });
     },
 
+    listSessions() {
+      return scan().list;
+    },
+
     getSession(id) {
       const { byId } = scan();
       const item = byId.get(id);

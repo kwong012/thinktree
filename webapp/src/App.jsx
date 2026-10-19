@@ -135,9 +135,9 @@ export default function App() {
       setActiveId(null);
       return;
     }
-    // 每个 tab 记住自己选中的 session，始终按 id 精确匹配。
+    // 每个 tab 记住自己选中的 session；允许选择 Dashboard 里的历史会话。
     const want = picked[activeAgent.sourceId];
-    if (want && ids.includes(want)) {
+    if (want) {
       if (activeId !== want) setActiveId(want);
       return;
     }
@@ -199,7 +199,16 @@ export default function App() {
       .then((sess) => {
         if (alive) setSessions((prev) => ({ ...prev, [`${sess.sourceId}:${sess.id}`]: sess }));
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!alive) return;
+        // 选中的历史会话已被删除/不可读：退回当前存活会话。
+        setPicked((prev) => {
+          if (prev[activeAgent.sourceId] !== activeId) return prev;
+          const next = { ...prev };
+          delete next[activeAgent.sourceId];
+          return next;
+        });
+      });
     return () => {
       alive = false;
     };

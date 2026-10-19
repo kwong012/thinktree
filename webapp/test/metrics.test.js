@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDashboard, formatPct } from '../src/dashboard/metrics.js';
+import {
+  buildDashboard,
+  buildDashboardFromHistory,
+  formatPct,
+} from '../src/dashboard/metrics.js';
 
 const NOW = new Date(2026, 9, 19, 12, 0, 0).getTime();
 const at = (day, hour) => new Date(2026, 9, day, hour, 10, 0).getTime();
@@ -68,6 +72,61 @@ test('aggregates multiple sessions and keeps the session table', () => {
   assert.equal(d.usage.cacheRead, 270);
   assert.equal(d.series.length, 2);
   assert.equal(d.heat.range, '24h');
+  assert.equal(d.heat.cells.length, 24);
+});
+
+test('maps full historical dashboard data for agent scope', () => {
+  const history = {
+    totals: {
+      usage: { input: 30, output: 6, reasoning: 2, cacheRead: 270, cacheWrite: 0, cost: 0.3 },
+      turns: 2,
+      contextTokens: 300,
+      generated: 8,
+      cost: 0.3,
+      durationMs: 3600000,
+    },
+    sessionRows: [
+      {
+        id: 'a',
+        title: 'a',
+        model: { provider: 'p', id: 'm' },
+        createdAt: at(18, 20),
+        updatedAt: at(18, 20),
+        turns: 1,
+        usage: { input: 10, cacheRead: 90 },
+        statuses: { ok: 1, error: 0, aborted: 0, running: 0 },
+      },
+      {
+        id: 'b',
+        title: 'b',
+        model: { provider: 'p', id: 'm' },
+        createdAt: at(19, 2),
+        updatedAt: at(19, 2),
+        turns: 1,
+        usage: { input: 20, cacheRead: 180 },
+        statuses: { ok: 1, error: 0, aborted: 0, running: 0 },
+      },
+    ],
+    context: { events: 1, chars: 12, sources: [{ name: 'system', count: 1, chars: 12 }] },
+    heatPoints: [
+      { at: at(18, 20), usage: { input: 10, cacheRead: 90 }, sessionId: 'a', turnIndex: 0 },
+      { at: at(19, 2), usage: { input: 20, cacheRead: 180 }, sessionId: 'b', turnIndex: 0 },
+    ],
+  };
+  const d = buildDashboardFromHistory(history, {
+    heatRange: '24h',
+    currentSessionId: 'a',
+    now: NOW,
+  });
+  assert.equal(d.scope, 'agent');
+  assert.equal(d.sessionRows.length, 2);
+  assert.equal(d.series.length, 2);
+  assert.equal(d.sessionRows.find((r) => r.id === 'a').isCurrent, true);
+  assert.equal(d.contextTokens, 300);
+  assert.equal(d.generated, 8);
+  assert.equal(d.turns, 2);
+  assert.equal(d.context.sources[0].name, 'system');
+  assert.equal(d.heat.hasData, true);
   assert.equal(d.heat.cells.length, 24);
 });
 

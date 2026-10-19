@@ -162,9 +162,7 @@ function addPoint(map, key, point, extra) {
   map.set(key, bucket);
 }
 
-function buildHeat(sessions, range = '24h', now = Date.now()) {
-  const points = collectPoints(sessions);
-
+export function buildHeatFromPoints(points, range = '24h', now = Date.now()) {
   if (range === '24h') {
     const endHour = startOfHour(now);
     const firstHour = endHour - 23 * HOUR;
@@ -282,6 +280,10 @@ function buildHeat(sessions, range = '24h', now = Date.now()) {
   };
 }
 
+function buildHeat(sessions, range = '24h', now = Date.now()) {
+  return buildHeatFromPoints(collectPoints(sessions), range, now);
+}
+
 function dayValuesOf(usage) {
   return usage.input + usage.output + usage.reasoning + usage.cacheRead + usage.cacheWrite;
 }
@@ -368,6 +370,57 @@ export function buildDashboard(
     heat: buildHeat(scoped, heatRange, now),
     currentId: current?.id || null,
     loadedSessions: list.length,
+  };
+}
+
+export function buildDashboardFromHistory(
+  history,
+  { heatRange = '24h', currentSessionId = null, now = Date.now() } = {},
+) {
+  const rows = (history?.sessionRows || []).map((row) => {
+    const usage = normalizeUsage(row.usage);
+    const contextTokens = usage.input + usage.cacheRead + usage.cacheWrite;
+    return {
+      id: row.id,
+      title: row.title || row.id,
+      short: formatShortTitle(row.title || row.id),
+      model: modelLabel(row.model),
+      updatedAt: row.updatedAt || 0,
+      turns: row.turns || 0,
+      usage,
+      contextTokens,
+      generated: usage.output + usage.reasoning,
+      cacheRate: contextTokens ? usage.cacheRead / contextTokens : NaN,
+      cost: usage.cost,
+      isCurrent: row.id === currentSessionId,
+      statuses: row.statuses || { ok: 0, error: 0, aborted: 0, running: 0 },
+    };
+  });
+  const sessionRows = rows.slice().sort((a, b) => b.updatedAt - a.updatedAt);
+  const totals = history?.totals || {};
+  const usage = normalizeUsage(totals.usage);
+  const contextTokens = totals.contextTokens ?? usage.input + usage.cacheRead + usage.cacheWrite;
+  const generated = totals.generated ?? usage.output + usage.reasoning;
+
+  return {
+    scope: 'agent',
+    heatRange,
+    sessionRows,
+    series: sessionRows.slice().sort((a, b) => a.updatedAt - b.updatedAt),
+    usage,
+    contextTokens,
+    generated,
+    total: contextTokens + generated,
+    cacheRate: contextTokens ? usage.cacheRead / contextTokens : NaN,
+    cost: usage.cost,
+    turns: totals.turns ?? sessionRows.reduce((n, r) => n + r.turns, 0),
+    durationMs: totals.durationMs || 0,
+    models: [],
+    statuses: history?.statuses || { ok: 0, error: 0, aborted: 0, running: 0 },
+    context: history?.context || { events: 0, chars: 0, sources: [] },
+    heat: buildHeatFromPoints(history?.heatPoints || [], heatRange, now),
+    currentId: currentSessionId,
+    loadedSessions: sessionRows.length,
   };
 }
 

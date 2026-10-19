@@ -12,6 +12,7 @@ thinktree/
 │   ├── schema/trace.js          统一数据模型（契约）
 │   ├── proc.js                  进程存活 + 前台窗口聚焦（PowerShell worker）
 │   ├── registry.js              汇总所有源的活会话
+│   ├── dashboard-history.js     历史 Dashboard 聚合（范围过滤 + 缓存）
 │   ├── sources/
 │   │   ├── index.js             源注册表
 │   │   ├── util.js              JSONL/SQLite 解析共用工具
@@ -41,7 +42,7 @@ thinktree/
 │       │   ├── physics.js       局部唤醒碰撞求解（return / stay）
 │       │   └── context.js       LOD / 语言 / 展开上下文
 │       └── dashboard/
-│           ├── Dashboard.jsx    右侧抽屉：范围、KPI、图表、会话表
+│           ├── Dashboard.jsx    右侧抽屉：全局范围、KPI、图表、会话表
 │           ├── metrics.js       usage / 缓存 / 上下文 / 热力图聚合
 │           ├── options.js       ECharts 图表配置
 │           ├── EChart.jsx       ECharts 实例、resize、dispose
@@ -89,7 +90,7 @@ thinktree/
 | 性能：7200 节点 / 7998 连线压测（p95 约 12–18ms） | ✅ |
 | 深/浅主题 + 中英切换 + SVG 图标 | ✅ |
 | `thinkTREE` 品牌字标 | ✅ |
-| Dashboard：agent 全活会话聚合 + 缓存/上下文/token + 24h/7d/30d 热力图 | ✅ |
+| Dashboard：当前会话 / 全量历史（24h/7d/30d）+ 缓存/上下文/token/热力图 | ✅ |
 | 提交规范（每次改动即提交） | ✅（见 AGENTS.md） |
 
 ## 4. 后续可选

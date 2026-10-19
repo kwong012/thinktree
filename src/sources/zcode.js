@@ -23,6 +23,18 @@ function hasTable(db, name) {
   return !!db.prepare("select 1 from sqlite_master where type='table' and name=?").get(name);
 }
 
+function mapSessionRow(r) {
+  return {
+    id: r.id,
+    title: r.title || r.id,
+    agent: 'zcode',
+    model: {},
+    directory: r.directory,
+    createdAt: r.time_created,
+    updatedAt: r.time_updated,
+  };
+}
+
 export function createZcodeSource() {
   let db = null;
   const getDb = () => {
@@ -50,17 +62,22 @@ export function createZcodeSource() {
         return { processes: [], sessions: [] };
       }
 
-      const sessions = rows.map((r) => ({
-        id: r.id,
-        title: r.title || r.id,
-        agent: 'zcode',
-        model: {},
-        directory: r.directory,
-        createdAt: r.time_created,
-        updatedAt: r.time_updated,
-      }));
+      const sessions = rows.map(mapSessionRow);
 
       return pickLive(procSnapshot, PATTERNS, sessions, { aliveWindow: ALIVE_WINDOW });
+    },
+
+    listSessions() {
+      try {
+        return getDb()
+          .prepare(
+            'select id, title, directory, time_created, time_updated from session order by time_updated desc',
+          )
+          .all()
+          .map(mapSessionRow);
+      } catch {
+        return [];
+      }
     },
 
     getSession(id) {

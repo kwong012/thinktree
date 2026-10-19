@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { t } from '../i18n.js';
 import { REDUCED, MOTION, easeOutExpo, tween } from '../motion.js';
+import { fetchDashboard } from '../api.js';
 import EChart from './EChart.jsx';
 import {
   buildDashboard,
+  buildDashboardFromHistory,
   formatCost,
   formatDuration,
   formatPct,
@@ -30,18 +32,59 @@ export default function Dashboard({
 }) {
   const [scope, setScope] = useState('agent');
   const [heatRange, setHeatRange] = useState('24h');
+  const [history, setHistory] = useState(null);
+  const [historyKey, setHistoryKey] = useState('');
+  const [historyLoading, setHistoryLoading] = useState(false);
   const lastDash = useRef(null);
+  const historyReq = useRef(0);
+
+  useEffect(() => {
+    if (!open || scope !== 'agent' || !agent?.sourceId) return undefined;
+    const key = `${agent.sourceId}|${heatRange}`;
+    const req = ++historyReq.current;
+    let alive = true;
+    setHistoryLoading(true);
+    fetchDashboard(agent.sourceId, heatRange)
+      .then((data) => {
+        if (!alive || req !== historyReq.current) return;
+        setHistory(data);
+        setHistoryKey(key);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive && req === historyReq.current) setHistoryLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, scope, agent?.sourceId, heatRange]);
 
   const dash = useMemo(() => {
     if (!open && lastDash.current) return lastDash.current;
-    const next = buildDashboard(sessions, {
-      scope,
-      heatRange,
-      currentSessionId: currentSession?.id,
-    });
+    const key = `${agent?.sourceId || ''}|${heatRange}`;
+    const next =
+      scope === 'agent' && history && historyKey === key
+        ? buildDashboardFromHistory(history, {
+            heatRange,
+            currentSessionId: currentSession?.id,
+          })
+        : buildDashboard(sessions, {
+            scope,
+            heatRange,
+            currentSessionId: currentSession?.id,
+          });
     lastDash.current = next;
     return next;
-  }, [open, sessions, scope, heatRange, currentSession?.id]);
+  }, [
+    open,
+    sessions,
+    scope,
+    heatRange,
+    currentSession?.id,
+    agent?.sourceId,
+    history,
+    historyKey,
+  ]);
 
   const tokenOption = useMemo(
     () => (dash.series.length ? buildTokenOption(dash.series, lang) : null),
@@ -60,15 +103,29 @@ export default function Dashboard({
     [dash.heat, lang],
   );
 
-  const sessionCount = scope === 'session' ? (currentSession ? 1 : 0) : sessions.length;
+  const historyReady =
+    scope === 'agent' &&
+    !!history &&
+    historyKey === `${agent?.sourceId || ''}|${heatRange}`;
+  const sessionCount =
+    scope === 'session'
+      ? currentSession
+        ? 1
+        : 0
+      : historyReady
+        ? history.sessionRows.length
+        : sessions.length;
   const loadedLabel =
     scope === 'agent'
-      ? `${sessions.length}/${totalSessions || agent?.sessions?.length || sessions.length}`
+      ? historyReady
+        ? String(history.sessionRows.length)
+        : `${sessions.length}/${totalSessions || agent?.sessions?.length || sessions.length}`
       : String(sessionCount);
 
   const heatHeight = heatRange === '7d' ? 248 : heatRange === '30d' ? 140 : 104;
-  const kpiKey = `${open ? 'open' : 'closed'}|${agent?.sourceId || ''}|${scope}`;
-  const chartKey = `${open ? 'open' : 'closed'}|${scope}|${heatRange}`;
+  const historyRev = historyReady ? history.generatedAt || 0 : 0;
+  const kpiKey = `${open ? 'open' : 'closed'}|${agent?.sourceId || ''}|${scope}|${historyRev}`;
+  const chartKey = `${open ? 'open' : 'closed'}|${scope}|${heatRange}|${historyRev}`;
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()} modal={false}>
@@ -94,7 +151,7 @@ export default function Dashboard({
               {scope === 'agent' ? (
                 <>
                   <span className="dash-dot" />
-                  <span>{t(lang, 'dashPartial')}</span>
+                  <span>{historyLoading ? t(lang, 'loading') : t(lang, 'dashHistory')}</span>
                 </>
               ) : null}
             </div>
@@ -112,6 +169,26 @@ export default function Dashboard({
                 onClick={() => setScope('session')}
               >
                 {t(lang, 'dashSession')}
+              </button>
+            </div>
+            <div className="dash-seg" role="group" aria-label={t(lang, 'dashRange')}>
+              <button
+                className={heatRange === '24h' ? 'on' : ''}
+                onClick={() => setHeatRange('24h')}
+              >
+                {t(lang, 'dashHeat24h')}
+              </button>
+              <button
+                className={heatRange === '7d' ? 'on' : ''}
+                onClick={() => setHeatRange('7d')}
+              >
+                {t(lang, 'dashHeat7d')}
+              </button>
+              <button
+                className={heatRange === '30d' ? 'on' : ''}
+                onClick={() => setHeatRange('30d')}
+              >
+                {t(lang, 'dashHeat30d')}
               </button>
             </div>
             <Dialog.Close asChild>
@@ -259,27 +336,9 @@ export default function Dashboard({
                       : `${dash.heat.start || '—'} → ${dash.heat.end || '—'} · ${
                           heatRange === '7d' ? '7d' : '24h'
                         }`}
+                    {' · '}
+                    {scope === 'agent' ? t(lang, 'dashAllSessions') : t(lang, 'dashSession')}
                   </div>
-                </div>
-                <div className="dash-seg" role="group" aria-label={t(lang, 'dashHeat')}>
-                  <button
-                    className={heatRange === '24h' ? 'on' : ''}
-                    onClick={() => setHeatRange('24h')}
-                  >
-                    {t(lang, 'dashHeat24h')}
-                  </button>
-                  <button
-                    className={heatRange === '7d' ? 'on' : ''}
-                    onClick={() => setHeatRange('7d')}
-                  >
-                    {t(lang, 'dashHeat7d')}
-                  </button>
-                  <button
-                    className={heatRange === '30d' ? 'on' : ''}
-                    onClick={() => setHeatRange('30d')}
-                  >
-                    {t(lang, 'dashHeat30d')}
-                  </button>
                 </div>
               </div>
               {heatOption ? (

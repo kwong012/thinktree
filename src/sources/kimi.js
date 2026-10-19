@@ -107,6 +107,10 @@ export function createKimiSource() {
       return live;
     },
 
+    listSessions() {
+      return scan().list;
+    },
+
     getSession(id) {
       const { byId } = scan();
       const item = byId.get(id);

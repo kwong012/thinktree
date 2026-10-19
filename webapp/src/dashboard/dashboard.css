@@ -74,7 +74,9 @@
 .dash-head-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px 10px;
   margin-left: auto;
 }
 .dash-seg {
@@ -322,7 +324,13 @@
 @media (max-width: 820px) {
   .dashboard, .dash-loading { width: 100%; min-width: 0; }
   .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dash-head { padding: 0 12px; gap: 8px; }
+  .dash-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .dash-head-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
   .dash-body { padding: 12px; }
   .dash-agent { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
 }

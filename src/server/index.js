@@ -7,6 +7,7 @@
  *   GET /api/proc                 进程/聚焦快照（调试）
  *   GET /api/agents               存活 agent + 各自活会话 + alive/focused
  *   GET /api/session/:source/:id  归一化会话（含 turns/events）
+ *   GET /api/dashboard/:source    指定范围的历史 Dashboard 聚合
  *   GET /api/stream               SSE：agents 快照 + 会话增量
  *   GET /*                        前端构建产物（src/web/dist）
  */
@@ -15,6 +16,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { join, extname, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRegistry } from '../registry.js';
+import { getDashboardHistory } from '../dashboard-history.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
@@ -90,6 +92,14 @@ const server = createHttpServer(async (req, res) => {
 
     if (path === '/api/agents') {
       return json(res, 200, registry.snapshot());
+    }
+
+    const hm = path.match(/^\/api\/dashboard\/([^/]+)$/);
+    if (hm) {
+      const sourceId = decodeURIComponent(hm[1]);
+      const data = await getDashboardHistory(registry, sourceId, url.searchParams.get('range'));
+      if (!data) return json(res, 404, { error: `source not found: ${sourceId}` });
+      return json(res, 200, data);
     }
 
     let m = path.match(/^\/api\/session\/([^/]+)\/([^/]+)$/);
