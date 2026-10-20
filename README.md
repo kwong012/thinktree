@@ -1,117 +1,94 @@
 # thinkTREE
 
-实时观察 AI agent 如何把一次提问变成答案。
+在终端里查上下文，不该靠 PageUp / PageDown。
 
-thinkTREE 读取本机 agent 的结构化会话存储，把「发送 → 上下文 → 模型调用 → 思考 → 工具 → 回答」渲染成可缩放的工作轨迹画布，并提供按 agent 聚合的用量 Dashboard。
+CLI/TUI agent 的对话是一条很长的滚动日志。想回看上一轮提问、工具输出或模型思考，只能在终端里反复翻页，翻完还容易丢失当前位置。
+
+thinkTREE 把当前会话变成一张可缩放、可拖动的工作轨迹图：左侧是完整对话树，右侧是无限画布，右下角有小地图；点一下就能回到对应位置。
 
 > 只读本地数据，不上传、不截屏、无遥测。
 
-![thinkTREE 画布与 Dashboard](docs/screenshot.png)
+![左侧轨迹树、无限画布与右下角小地图](docs/screenshot.png)
 
-## 特性
+## 为什么用它
 
-- **多 agent 并行观察**：顶部 tab 区分 opencode / pi / codex / kimi / zcode / cline。
-- **Canvas 2D 工作轨迹**：节点与连线批量绘制、视口裁剪，支持大量节点。
-- **语义缩放（LOD）**：远看结构、中看摘要、近看细节。
-- **实时跟随**：自动跟随终端当前选中的会话；SSE 增量更新。
-- **拖拽与碰撞**：节点可拖动，支持「停留 / 回弹」两种物理模式。
-- **左侧轨迹树**：按轮次展开步骤，点击直接定位节点。
-- **Dashboard**：当前会话或所选时间范围内的全量历史会话；token、缓存、上下文、费用、轮次、热力图与会话明细。
+**左侧轨迹树**
+
+按轮次展开完整对话，查看提问、上下文、模型调用、思考、工具和回答。点击任意步骤，画布会自动定位到对应节点，不用再在终端里搜索或翻页。
+
+**无限画布**
+
+每个步骤是一个节点，因果与上下文关系用连线表示。可以自由缩放、平移和拖动，信息按空间位置组织，而不是挤在一条滚动日志里。
+
+**右下角小地图**
+
+显示整个会话的缩略图和当前视口。单击或拖动即可快速跳转，滚轮缩放，适合在长会话里快速回到某一轮。
+
+**Dashboard**
+
+需要看整体数据时打开右上角「数据」：token、缓存、上下文、费用、轮次和热力图，都集中在一个面板里。
+
+## 使用方式
+
+1. 启动后，在顶部 tab 选择正在运行的 agent。
+2. 在左侧轨迹树展开某一轮，浏览该轮完整步骤。
+3. 点击步骤，或拖动右下角小地图，快速定位画布位置。
+4. 需要汇总数据时，打开 Dashboard。
+
+多个 agent 同时运行时，会用 tab 分开显示。
 
 ## 快速开始
 
 要求：
 
-- Node.js **>= 22.5**（使用 `node:sqlite`）
-- Windows 10/11（进程存活、cwd 与 Windows Terminal tab 跟随依赖 PowerShell / UIAutomation）
-- 其他平台可运行前端与文件型数据源，但进程/终端相关能力会降级
+- Node.js >= 22.5
+- Windows 10/11（进程与终端 tab 跟随相关功能）
+- 其他平台可以运行，但部分 agent 跟随能力会降级
 
 ```bash
-# 安装前端依赖
 npm run web:install
-
-# 构建前端
 npm run build:web
-
-# 启动（默认 http://localhost:9178）
 npm start
 ```
 
-Windows 也可以直接双击 `thinktree.bat`，使用交互菜单启动 / 停止 / 查看日志。
+默认打开 `http://localhost:9178`。
+
+Windows 也可以直接双击 `thinktree.bat`，通过菜单启动、停止或查看日志。
 
 前端开发：
 
 ```bash
-npm run dev:web   # Vite 5518，/api 代理到 9178
+npm run dev:web
 ```
 
 ## 支持的 agent
 
-| Agent | 本地数据 |
+| Agent | 状态 |
 |---|---|
-| **opencode** | `~/.local/share/opencode/opencode.db`（SQLite v2 + legacy） |
-| **pi** | `~/.pi/agent/sessions/**/*.jsonl` |
-| **Codex** | `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` |
-| **Kimi Code** | `~/.kimi-code/sessions/<wd>/<sid>/` |
-| **ZCode** | `~/.zcode/cli/db/db.sqlite` |
-| **Cline** | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\tasks\<id>\` |
+| **opencode（TUI）** | 作者主要测试平台 |
+| **pi（CLI）** | 作者主要测试平台 |
+| Codex | 已适配，未大量验证 |
+| Kimi Code | 已适配，未大量验证 |
+| ZCode | 已适配，未大量验证 |
+| Cline | 已适配，未大量验证 |
+
+本项目主要提供思路和适配框架。opencode TUI 和 pi CLI 是主要验证平台；其他 agent、不同版本或安装方式可能需要自行调整适配层。
 
 ## Dashboard
 
-- **当前会话**：只统计当前打开的会话。
-- **全部会话**：统计当前 agent 在所选 **24h / 7d / 30d** 范围内的全部历史会话。
-- 范围控件位于 Dashboard 头部，同时作用于全部会话的 KPI、Token、缓存趋势、上下文构成、会话表与热力图。
+- **当前会话**：只看当前打开的会话。
+- **全部会话**：按 24h / 7d / 30d 汇总该 agent 的历史会话。
+- 包含 token、缓存命中、上下文构成、费用、轮次、热力图与会话明细。
 
 ![Dashboard](docs/dashboard.png)
 
-## 环境变量
-
-| 变量 | 作用 |
-|---|---|
-| `PORT` | 后端端口，默认 `9178` |
-| `OPENCODE_DB` | opencode SQLite 路径 |
-| `OPENCODE_CONFIG_DIR` | opencode 配置目录 |
-| `PI_SESSION_DIR` | pi 会话目录 |
-| `CODEX_SESSION_DIR` | Codex 会话目录 |
-| `KIMI_CODE_HOME` | Kimi Code 数据目录 |
-| `ZCODE_DB` | ZCode SQLite 路径 |
-| `CLINE_TASKS_DIR` | Cline 任务目录 |
-| `TT_EXIT_ON_CLIENT_CLOSE` | 设为 `1` 时，浏览器全部关闭后退出服务 |
-
-## 架构
-
-```text
-src/
-  server/           HTTP API + SSE + 静态资源
-  sources/          各 agent 的数据源适配器
-  adapters/         opencode SQLite 读取
-  dashboard-history 历史 Dashboard 聚合
-  schema/           统一 trace 数据模型
-webapp/
-  src/canvas/       Canvas 2D 画布与交互
-  src/dashboard/    ECharts Dashboard
-  src/motion.js     统一缓动与补间
-```
-
-后端零运行时依赖，只使用 Node 内置模块；前端依赖隔离在 `webapp/`，构建产物输出到 `src/web/dist/`，由后端托管。
-
-## 测试
-
-```bash
-npm test
-```
-
-包含 Dashboard 历史聚合与前端指标映射测试。
-
 ## 隐私
 
-thinkTREE 只读取本机 agent 的本地存储，并通过本地 HTTP 提供给浏览器：
-
+- 只读取本机 agent 的本地会话存储
 - 不上传会话内容
 - 不截图 / OCR
 - 无遥测
-- SQLite 以只读模式打开
 
 ## License
 
-尚未选择开源许可证；上传 GitHub 前请补充 `LICENSE`。
+项目代码采用 MIT License。第三方开源组件及许可证将在后续补充说明。
