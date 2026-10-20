@@ -13,6 +13,8 @@
  * keep writing while we observe.
  */
 import { DatabaseSync } from 'node:sqlite';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 import {
   EventType,
   Status,
@@ -22,7 +24,8 @@ import {
   normalizeModel,
 } from '../schema/trace.js';
 
-const DEFAULT_DB = 'opencode.db';
+const DEFAULT_DB =
+  process.env.OPENCODE_DB || join(homedir(), '.local', 'share', 'opencode', 'opencode.db');
 
 function safeJson(str, fallback = {}) {
   if (str == null) return fallback;
