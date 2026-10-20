@@ -90,6 +90,8 @@ Event   { seq, type, at, data }
 | 动效 | 连线流动虚线；节点位移回弹缓动；镜头平滑过渡 |
 | 物理 | 仅唤醒碰撞相关节点（上限 800）；`return` 回弹 / `stay` 停留，默认 `return` |
 | 端口 | 默认 `9178`（`PORT` 环境变量覆盖）；Vite dev `5518`，`/api` 代理到 `9178` |
+| 监听 | 默认 `0.0.0.0:9178`，所有网卡可访问且无登录鉴权；仅建议在可信局域网使用 |
+| 演示 | `npm run demo`（`TT_DEMO=1`，合成中英混合多轮数据） |
 | 环境变量 | `OPENCODE_DB` / `PI_SESSION_DIR` / `CODEX_SESSION_DIR` / `KIMI_CODE_HOME` / `ZCODE_DB` / `CLINE_TASKS_DIR` 覆盖数据源路径；`OPENCODE_CONFIG_DIR` 覆盖配置目录；`TT_EXIT_ON_CLIENT_CLOSE=1` 控制浏览器关闭后退出 |
 | Dashboard | 右侧抽屉；ECharts 6（懒加载）+ Radix Dialog；当前会话或当前 agent 指定范围内的全量历史会话 |
 
@@ -98,7 +100,7 @@ Event   { seq, type, at, data }
 - 后端 `package.json` **无 dependencies**（仅 Node 内置）。
 - 前端依赖全部在 `webapp/`，构建产物输出 `src/web/dist`，由后端托管。
 - 前端只经 `/api` 取数，不直接读文件/进程。
-- `@xyflow/react` 仍在依赖清单中，但已不参与渲染（Canvas 2D 接管），后续移除。
+- `@xyflow/react` 保留在依赖清单中，但已不参与渲染（Canvas 2D 接管）。
 - Dashboard 依赖只进 `webapp/`；ECharts 通过动态 import 懒加载，不进入首屏包。
 
 ## 9. 后端 API

@@ -7,7 +7,14 @@
 ```
 thinktree/
 ├── SPEC.md / PLAN.md / AGENTS.md
+├── .github/workflows/ci.yml     CI（构建 + 测试）
 ├── package.json                 后端（零运行时依赖）
+├── LICENSE                      MIT
+├── THIRD_PARTY_NOTICES.md       第三方许可证与 ECharts NOTICE
+├── demo/demo-data.js            合成的中英混合多轮演示数据
+├── scripts/
+│   ├── demo.mjs                 启动合成演示模式
+│   └── dump-trace.mjs           调试 trace
 ├── src/
 │   ├── schema/trace.js          统一数据模型（契约）
 │   ├── proc.js                  进程存活 + 前台窗口聚焦（PowerShell worker）
@@ -16,6 +23,7 @@ thinktree/
 │   ├── sources/
 │   │   ├── index.js             源注册表
 │   │   ├── util.js              JSONL/SQLite 解析共用工具
+│   │   ├── demo.js              合成演示 source（TT_DEMO=1）
 │   │   ├── opencode.js          SQLite（v2 + legacy）
 │   │   ├── pi.js                pi JSONL
 │   │   ├── codex.js             Codex rollout JSONL
@@ -57,6 +65,7 @@ thinktree/
   id, name, interface, description, available,
   processPatterns: RegExp[],                     // 进程存活判定
   listLive(procSnapshot) -> { processes, sessions },
+  listSessions?() -> SessionSummary[],            // 历史 Dashboard 聚合
   getSession(rawId) -> 统一 Session
 }
 ```
@@ -91,6 +100,8 @@ thinktree/
 | 深/浅主题 + 中英切换 + SVG 图标 | ✅ |
 | `thinkTREE` 品牌字标 | ✅ |
 | Dashboard：当前会话 / 全量历史（24h/7d/30d）+ 缓存/上下文/token/热力图 | ✅ |
+| 合成演示模式（22 轮中英混合数据） | ✅ |
+| MIT License + 第三方 notices | ✅ |
 | 提交规范（每次改动即提交） | ✅（见 AGENTS.md） |
 
 ## 4. 后续可选
@@ -98,7 +109,6 @@ thinktree/
 - ZCode `rollout/model-io-*.jsonl` 原始 request/response 透传到 model-call 节点。
 - JSONL 增量 tail（避免每次整文件读取）。
 - PTY 兜底源（无本地存储的 CLI agent）。
-- 移除已不参与渲染的 `@xyflow/react` 依赖。
 - 更多 agent（Claude Code、Gemini CLI 等）。
 
 ## 5. 启动 / 停止
@@ -106,7 +116,8 @@ thinktree/
 - 双击根目录 `thinktree.bat`：打开交互菜单（启动/停止/状态/浏览器/日志/清空）。
 - `[1]` 启动服务并自动用 Edge/Chrome 全屏（F11）打开浏览器。
 - 关闭浏览器标签/窗口后，SSE 客户端归零，服务在 2 秒后自动退出。
-- 手动运行：`npm start`，默认端口 `9178`（`PORT` 可覆盖）。
+- 手动运行：`npm start`，默认端口 `9178`（`PORT` 可覆盖），监听 `0.0.0.0` 且无鉴权，仅建议可信局域网使用。
+- 合成演示：`npm run demo`（`TT_DEMO=1`，不读取真实 agent，展示 22 轮中英混合数据）。
 - 前端开发：`npm run dev:web`（Vite `5518`，`/api` 代理到 `9178`）。
 - 数据源路径可用环境变量覆盖：`OPENCODE_DB`、`PI_SESSION_DIR`、`CODEX_SESSION_DIR`、`KIMI_CODE_HOME`、`ZCODE_DB`、`CLINE_TASKS_DIR`；配置目录用 `OPENCODE_CONFIG_DIR`。
 
