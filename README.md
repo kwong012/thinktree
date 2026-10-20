@@ -6,6 +6,8 @@ CLI/TUI agent 的对话是一条很长的滚动日志。想回看上一轮提问
 
 thinkTREE 把当前会话变成一张可缩放、可拖动的工作轨迹图：左侧是完整对话树，右侧是无限画布，右下角有小地图，点一下回到对应位置。
 
+**在线介绍 / 演示：<https://kwong012.github.io/thinktree-web/>**
+
 > 只读本地数据
 
 ![左侧轨迹树、无限画布与右下角小地图](docs/demo-canvas.gif)

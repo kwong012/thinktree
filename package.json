@@ -5,6 +5,11 @@
   "type": "module",
   "description": "Universal agent working-trace panel: see how an agent turns a prompt into an answer.",
   "license": "MIT",
+  "homepage": "https://kwong012.github.io/thinktree-web/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kwong012/thinktree.git"
+  },
   "keywords": [
     "ai-agents",
     "observability",
