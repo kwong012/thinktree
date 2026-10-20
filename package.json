@@ -4,12 +4,20 @@
   "private": true,
   "type": "module",
   "description": "Universal agent working-trace panel: see how an agent turns a prompt into an answer.",
+  "keywords": [
+    "ai-agents",
+    "observability",
+    "trace",
+    "opencode",
+    "canvas"
+  ],
   "scripts": {
     "start": "node src/server/index.js",
     "dump": "node scripts/dump-trace.mjs",
     "web:install": "npm --prefix webapp install",
     "dev:web": "npm --prefix webapp run dev",
-    "build:web": "npm --prefix webapp run build"
+    "build:web": "npm --prefix webapp run build",
+    "test": "node --test test/dashboard-history.test.mjs webapp/test/metrics.test.js"
   },
   "engines": {
     "node": ">=22.5.0"
