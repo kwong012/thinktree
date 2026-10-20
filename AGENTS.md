@@ -12,6 +12,11 @@
 - 只提交源码与文档；`node_modules/`、`src/web/dist/`、`workfile-temp/`、`.playwright-mcp/` 已被忽略。
 - 提交信息用简洁英文，`type: summary` 风格（如 `feat: ...`、`fix: ...`）。
 
+## 远程推送
+
+- 默认只推送 `master`、`dash`、`test`；`xiaoguo` 保留本地，不推送。
+- 不推送历史标签，除非明确需要。
+
 ## 仓库卫生
 
 - `.gitignore` 已覆盖依赖、构建产物、运行时临时文件、日志、测试产物与环境变量。
