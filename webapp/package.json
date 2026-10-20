@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "thinktree 前端画布面板（依赖隔离：自带 node_modules，不被后端引用）",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

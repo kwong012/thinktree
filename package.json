@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Universal agent working-trace panel: see how an agent turns a prompt into an answer.",
+  "license": "MIT",
   "keywords": [
     "ai-agents",
     "observability",

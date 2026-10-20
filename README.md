@@ -91,4 +91,6 @@ npm run dev:web
 
 ## License
 
-项目代码采用 MIT License。第三方开源组件及许可证将在后续补充说明。
+项目代码采用 [MIT License](LICENSE)。
+
+第三方开源组件与许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
