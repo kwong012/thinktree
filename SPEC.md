@@ -83,6 +83,7 @@ Event   { seq, type, at, data }
 | 运行时 | Node ≥ 22.5（`node:sqlite`），后端零运行时依赖 |
 | 后端 | `node:http` + SSE |
 | 进程/聚焦 | PowerShell 轮询（base64 传参避免乱码） |
+| 终端跟随 | 独立常驻 PowerShell worker，每 2s 读取 Windows Terminal 当前选中 tab；12s 无输出自动重启 |
 | 前端 | Vite 8 + React 19（独立 `webapp/`，依赖隔离） |
 | 画布 | 自研 Canvas 2D（`CanvasStage.jsx`）：节点/边批量路径 + 视口裁剪，无逐节点 DOM |
 | 布局 | 自研：以提问为根的树 + 分层网格（每轮 4 簇/行、轮次网格排布，整体接近方形） |

@@ -18,6 +18,7 @@ thinktree/
 ├── src/
 │   ├── schema/trace.js          统一数据模型（契约）
 │   ├── proc.js                  进程存活 + 前台窗口聚焦（PowerShell worker）
+│   ├── terminal.js              Windows Terminal tab 常驻 worker（pi/opencode）
 │   ├── registry.js              汇总所有源的活会话
 │   ├── dashboard-history.js     历史 Dashboard 聚合（范围过滤 + 缓存）
 │   ├── sources/
