@@ -9,8 +9,11 @@ import { createCodexSource } from './codex.js';
 import { createKimiSource } from './kimi.js';
 import { createZcodeSource } from './zcode.js';
 import { createClineSource } from './cline.js';
+import { createDemoSource } from './demo.js';
 
 export function createSources() {
+  if (process.env.TT_DEMO === '1') return [createDemoSource()];
+
   const factories = [
     createOpencodeSource,
     createPiSource,

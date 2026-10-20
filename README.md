@@ -53,6 +53,12 @@ npm start
 
 默认打开 `http://localhost:9178`。
 
+没有本地 agent 时，可以用合成多轮数据预览界面：
+
+```bash
+npm run demo
+```
+
 Windows 也可以直接双击 `thinktree.bat`，通过菜单启动、停止或查看日志。
 
 前端开发：

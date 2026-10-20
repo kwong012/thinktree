@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "start": "node src/server/index.js",
+    "demo": "node scripts/demo.mjs",
     "dump": "node scripts/dump-trace.mjs",
     "web:install": "npm --prefix webapp install",
     "dev:web": "npm --prefix webapp run dev",
