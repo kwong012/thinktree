@@ -1,10 +1,35 @@
-workfile-temp/
+# 依赖
 node_modules/
-*.log
-.DS_Store
-.playwright-mcp/
-.run/
+.pnpm-store/
 
-# 前端构建产物（由 webapp/ 构建生成，不纳入版本控制）
+# 构建产物
+dist/
+build/
 src/web/dist/
+*.tsbuildinfo
+
+# 运行时 / 临时文件
+workfile-temp/
+.run/
+logs/
 data/
+*.log
+*.tmp
+
+# 测试与调试产物
+coverage/
+.playwright-mcp/
+test-results/
+playwright-report/
+
+# 环境变量
+.env
+.env.*
+!.env.example
+
+# 操作系统 / 编辑器
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
