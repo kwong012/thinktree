@@ -8,7 +8,11 @@ thinkTREE 把当前会话变成一张可缩放、可拖动的工作轨迹图：�
 
 > 只读本地数据，不上传、不截屏、无遥测。
 
-![左侧轨迹树、无限画布与右下角小地图](docs/screenshot.png)
+![左侧轨迹树、无限画布与右下角小地图](docs/demo-canvas.gif)
+
+[查看完整画布演示视频](docs/demo-canvas.mp4)
+
+> 演示使用合成的中英混合多轮会话，不含真实对话或凭据。
 
 ## 为什么用它
 
@@ -86,7 +90,13 @@ npm run dev:web
 - **全部会话**：按 24h / 7d / 30d 汇总该 agent 的历史会话。
 - 包含 token、缓存命中、上下文构成、费用、轮次、热力图与会话明细。
 
-![Dashboard](docs/dashboard.png)
+![Dashboard 静态截图](docs/dashboard.png)
+
+动图演示：
+
+![Dashboard 演示](docs/demo-dashboard.gif)
+
+[查看完整 Dashboard 演示视频](docs/demo-dashboard.mp4)
 
 ## 隐私
 
