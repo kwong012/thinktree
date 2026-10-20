@@ -15,7 +15,7 @@
 
 - ❌ 模型内部计算（权重/注意力/logits/KV cache）。客户端拿不到。
 - ❌ 推理引擎内部调度（prefill/decode/batching）。
-- ❌ 历史会话浏览/回放（只显示存活进程对应的当前会话）。
+- ❌ 历史会话浏览/回放（面板只显示存活进程对应的当前会话；Dashboard 可按范围聚合历史统计，不提供逐条回放）。
 - ❌ 截屏 / OCR（各家都有本地结构化存储）。
 - ❌ 逐字滚动的直播轨迹。
 
@@ -41,6 +41,8 @@
 | **Kimi Code** | `~/.kimi-code/sessions/<wd>/<sid>/` | `state.json`（标题/时间）+ `agents/main/wire.jsonl`（`turn.prompt`、`context.append_loop_event`: step/content.part/tool.call/tool.result/step.end） |
 | **ZCode** | `~/.zcode/cli/db/db.sqlite` | `session`+`message`+`part`（与 opencode legacy 同构）；另有 `rollout/model-io-*.jsonl` 原始 IO |
 | **Cline** | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\tasks\<id>\` | `task_metadata.json` + `api_conversation_history.json` + `ui_messages.json`（无任务时 available=false） |
+
+路径覆盖：`OPENCODE_DB`、`PI_SESSION_DIR`、`CODEX_SESSION_DIR`、`KIMI_CODE_HOME`、`ZCODE_DB`、`CLINE_TASKS_DIR`；opencode 配置目录可用 `OPENCODE_CONFIG_DIR`。
 
 分层策略：L1 读原生存储（已覆盖全部）；L2 hook/插件；L3 PTY 兜底（未实现）。
 
@@ -88,6 +90,7 @@ Event   { seq, type, at, data }
 | 动效 | 连线流动虚线；节点位移回弹缓动；镜头平滑过渡 |
 | 物理 | 仅唤醒碰撞相关节点（上限 800）；`return` 回弹 / `stay` 停留，默认 `return` |
 | 端口 | 默认 `9178`（`PORT` 环境变量覆盖）；Vite dev `5518`，`/api` 代理到 `9178` |
+| 环境变量 | `OPENCODE_DB` / `PI_SESSION_DIR` / `CODEX_SESSION_DIR` / `KIMI_CODE_HOME` / `ZCODE_DB` / `CLINE_TASKS_DIR` 覆盖数据源路径；`OPENCODE_CONFIG_DIR` 覆盖配置目录；`TT_EXIT_ON_CLIENT_CLOSE=1` 控制浏览器关闭后退出 |
 | Dashboard | 右侧抽屉；ECharts 6（懒加载）+ Radix Dialog；当前会话或当前 agent 指定范围内的全量历史会话 |
 
 ## 8. 依赖隔离

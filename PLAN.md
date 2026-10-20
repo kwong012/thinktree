@@ -108,6 +108,7 @@ thinktree/
 - 关闭浏览器标签/窗口后，SSE 客户端归零，服务在 2 秒后自动退出。
 - 手动运行：`npm start`，默认端口 `9178`（`PORT` 可覆盖）。
 - 前端开发：`npm run dev:web`（Vite `5518`，`/api` 代理到 `9178`）。
+- 数据源路径可用环境变量覆盖：`OPENCODE_DB`、`PI_SESSION_DIR`、`CODEX_SESSION_DIR`、`KIMI_CODE_HOME`、`ZCODE_DB`、`CLINE_TASKS_DIR`；配置目录用 `OPENCODE_CONFIG_DIR`。
 
 ## 6. 会话定位
 
@@ -115,3 +116,4 @@ thinktree/
 - opencode：读取 `OC | <会话标题>` 标签页，按 session title 精确匹配；标题不在最近 100 条时按标题补查数据库。
 - pi：读取 Windows Terminal 标签页 `π - <会话名> - <用户>`，按 `session_info.name` 精确匹配。
 - 桌面端：不参与 cwd 匹配。
+- Dashboard「全部会话」通过 `/api/dashboard/:source` 聚合所选范围（24h/7d/30d）的历史会话；与面板的当前会话定位互不影响。

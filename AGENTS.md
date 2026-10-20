@@ -11,3 +11,8 @@
 - 提交前确保前端可构建：`npm run build:web`（或在 `webapp/` 下 `npm run build`）。
 - 只提交源码与文档；`node_modules/`、`src/web/dist/`、`workfile-temp/`、`.playwright-mcp/` 已被忽略。
 - 提交信息用简洁英文，`type: summary` 风格（如 `feat: ...`、`fix: ...`）。
+
+## 仓库卫生
+
+- `.gitignore` 已覆盖依赖、构建产物、运行时临时文件、日志、测试产物与环境变量。
+- 不提交本地绝对路径、凭据、`.env` 或数据库/日志文件；默认路径用 `homedir()` 拼接，并允许环境变量覆盖。
